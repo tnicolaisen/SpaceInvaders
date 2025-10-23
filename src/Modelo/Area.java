@@ -21,14 +21,6 @@ public class Area {
     private Map<Integer, Entidad> entidades;
     private Oleada oleada;
     private Direcciones direccionOleada;
-    private Muro muro1;
-    private Muro muro2;
-    private Muro muro3;
-    private Muro muro4;
-    private Muro muro5;
-    private Muro muro6;
-    private Barra barra;
-    private Bateria bateria;
 
     // Dimensiones de la ventana
     private Dimension dimension;
@@ -74,31 +66,42 @@ public class Area {
         configurarTimers();
     }
 
+    // ------------------------------------
+    // Métodos públicos
+    // ------------------------------------
+
     /**
-     * Devuelve la batería controlable por el jugador.
-     * @return Batería que representa al jugador.
+     * Permite mover al jugador (representado por la Batería) a la derecha.
      */
-    public Entidad obtenerJugador(){return bateria;}
-
     public void moverJugadorDerecha(){
-        if (bateria.getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
-            bateria.moverseDerecha(5);
-            System.out.println("Se movió el jugador a la derecha. Posición: " + bateria.getPunto());
+        if (entidades.get(7).getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
+            entidades.get(7).moverseDerecha(5);
+            System.out.println("Se movió el jugador a la derecha. Posición: " + entidades.get(7).getPunto());
         }
     }
 
+    /**
+     * Permite mover al jugador (representado por la Batería) a la izquierda.
+     */
     public void moverJugadorIzquierda(){
-        if (bateria.getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
-            bateria.moverseIzquierda(5);
-            System.out.println("Se movió el jugador a la izquierda. Posición: " + bateria.getPunto());
+        if (entidades.get(7).getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
+            entidades.get(7).moverseIzquierda(5);
+            System.out.println("Se movió el jugador a la izquierda. Posición: " + entidades.get(7).getPunto());
         }
     }
 
+    /**
+     * Permite mover hacer que la Batería que representa al jugador dispare un proyectil.
+     */
     public void dispararJugador(){
-        entidades.put(contadorEntidades, bateria.disparar());
+        entidades.put(contadorEntidades, ((Bateria) entidades.get(7)).disparar());
         contadorEntidades++;
         System.out.println("Se disparó un proyectil. Entidades: " + entidades.size());
     }
+
+    // ------------------------------------
+    // Métodos privados
+    // ------------------------------------
 
     /**
      * Genera las entidades en el Area de juego.
@@ -106,37 +109,23 @@ public class Area {
     private void generarEntidades(){
         entidades = new HashMap<>();
 
-        // --------------------------
-        // Muros
-        // --------------------------
-        muro1 = new Muro(new Punto(125, 700));
-        entidades.put(0, muro1);
-        muro2 = new Muro(new Punto(225, 700));
-        entidades.put(1, muro2);
-        muro3 = new Muro(new Punto(325, 700));
-        entidades.put(2, muro3);
-        muro4 = new Muro(new Punto(425, 700));
-        entidades.put(3, muro4);
-        muro5 = new Muro(new Punto(525, 700));
-        entidades.put(4, muro5);
-        muro6 = new Muro(new Punto(625, 700));
-        entidades.put(5, muro6);
+        // -------------------------- Muros
 
-        // --------------------------
-        // Barra
-        // --------------------------
-        barra = new Barra(new Punto(50, 830));
-        entidades.put(6, barra);
+        entidades.put(0, new Muro(new Punto(125, 700)));
+        entidades.put(1, new Muro(new Punto(225, 700)));
+        entidades.put(2, new Muro(new Punto(325, 700)));
+        entidades.put(3, new Muro(new Punto(425, 700)));
+        entidades.put(4, new Muro(new Punto(525, 700)));
+        entidades.put(5, new Muro(new Punto(625, 700)));
 
-        // --------------------------
-        // Bateria
-        // --------------------------
-        bateria = new Bateria(new Punto(375, 808));
-        entidades.put(7, bateria);
+        // -------------------------- Barra
+        entidades.put(6, new Barra(new Punto(50, 830)));
 
-        // --------------------------
-        // Oleada
-        // --------------------------
+        // -------------------------- Batería
+        entidades.put(7, new Bateria(new Punto(375, 808)));
+
+        // -------------------------- Oleada
+
         oleada = new Oleada(new Punto(235, 90));
         direccionOleada = Direcciones.DERECHA;
         contadorEntidades = 8;
@@ -146,6 +135,9 @@ public class Area {
         }
     }
 
+    /**
+     * Configura los dos timers que utiliza el Area.
+     */
     private void configurarTimers(){
         timerEjecucion = new Timer();
         taskEjecucion = new TimerTask() {
@@ -166,6 +158,9 @@ public class Area {
         timerOleada.scheduleAtFixedRate(taskOleada, 0, 300);
     }
 
+    /**
+     * Ejecuta la lógica de movimiento de la Oleada (de naves).
+     */
     private void moverOleada(){
         // ------------------------ Movimiento de la oleada
         if (oleada.getEsquinaInferiorIzquierda().getPosicionY() < margenAbajo || oleada.getEsquinaInferiorDerecha().getPosicionX() < margenDerecha){
