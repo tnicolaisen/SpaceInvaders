@@ -143,7 +143,10 @@ public class Area {
         taskEjecucion = new TimerTask() {
             @Override
             public void run() {
-                if (!partidaPerdida){ejecutarCiclo();}
+                if (!partidaPerdida){
+                    moverProyectiles();
+                    verificarColisionProyectiles();
+                    notificarVisual();}
             }
         };
         timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 10);
@@ -191,8 +194,20 @@ public class Area {
     /**
      * Llama por primera vez al observador, a la espera del jugador
      */
-    private void ejecutarCiclo(){
+    private void notificarVisual(){
 
+        // Notificación a la vista por medio del obsevador
+        for (int i = 0; i < entidades.size(); i++) {
+            if (entidades.get(i) != null) {
+                observador.actualizarPosiciones(i, entidades.get(i).getPunto(), entidades.get(i).getDimension(), entidades.get(i).getTipoEntidad(), entidades.get(i).getInactivo());
+            }
+        }
+    }
+
+    /**
+     * Ejecuta el movimiento correspondiente de los proyectiles que estén en el área.
+     */
+    private void moverProyectiles(){
         // Movimiento de los proyectiles
         for (Entidad entidad : entidades.values()){
             if (entidad instanceof Proyectil){ // Similar al casteo. Aquí simplemente especifico la entidad.
@@ -200,7 +215,12 @@ public class Area {
                 proyectil.continuarTrayectoria();
             }
         }
+    }
 
+    /**
+     * Verifica si un proyectil colisionó con una Nave, un Muro o la Batería.
+     */
+    private void verificarColisionProyectiles(){
         // Colisión de los proyectiles
         for (Map.Entry<Integer, Entidad> proyectil : entidades.entrySet()){
             if (proyectil.getValue() instanceof Proyectil){
@@ -219,13 +239,6 @@ public class Area {
                         System.out.println("Una nave ha sido dañada.");
                     }
                 }
-            }
-        }
-
-        // Notificación a la vista por medio del obsevador
-        for (int i = 0; i < entidades.size(); i++) {
-            if (entidades.get(i) != null) {
-                observador.actualizarPosiciones(i, entidades.get(i).getPunto(), entidades.get(i).getDimension(), entidades.get(i).getTipoEntidad(), entidades.get(i).getInactivo());
             }
         }
     }
