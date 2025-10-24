@@ -1,8 +1,17 @@
 package Visual.Contenedores;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class EspacioMenuPrincipal extends JPanel {
+    // --------------------------
+    // Estado
+    // --------------------------
+
+    // -------------------------- Labels
     private JLabel lblNave;
     private JLabel lblBateria;
     private JLabel lblLogo;
@@ -10,16 +19,41 @@ public class EspacioMenuPrincipal extends JPanel {
     private JLabel lblCreditos;
     private JLabel lblbCreditoDecena;
     private JLabel lblbCreditoUnidad;
+
+    // -------------------------- Botones
     private JButton btnJugar;
     private JButton btnRanking;
 
+    // -------------------------- Imagenes de Botones
+    ImageIcon imgBtnJugarIdle;
+    ImageIcon imgBtnJugarClicked;
+    ImageIcon imgBtnJugarHover;
+    ImageIcon imgBtnRankingIdle;
+    ImageIcon imgBtnRankingHover;
+    ImageIcon imgBtnRankingClicked;
+
+    // --------------------------
+    // Constructor
+    // --------------------------
+
+    /**
+     * Constructor. Genera un espacio donde se renderizan los elementos del menú principal.
+     */
     public EspacioMenuPrincipal() {
-        this.setBounds(0, 0, 800, 900);
-        this.setFocusable(true);
         configurarEspacio();
         cargarElementos();
+        cargarImagenesBotones();
+        configurarListeners();
+
     }
 
+    // --------------------------
+    // Métodos privados
+    // --------------------------
+
+    /**
+     * Añade los objetos visibles en pantalla del menú principal.
+     */
     private void cargarElementos(){
 
         // -----------------------------
@@ -105,10 +139,95 @@ public class EspacioMenuPrincipal extends JPanel {
         this.add(btnRanking);
     }
 
+    /**
+     * Carga las imágenes de los botones.
+     */
+    private void cargarImagenesBotones(){
+        // -------------------------- Jugar
+        imgBtnJugarIdle = new ImageIcon(getClass().getResource("/Imagenes/MenuPrincipal/botonJugarIdle.png"));
+        imgBtnJugarClicked = new ImageIcon(getClass().getResource(("/Imagenes/MenuPrincipal/botonJugarClicked.png")));
+        imgBtnJugarHover = new ImageIcon(getClass().getResource("/Imagenes/MenuPrincipal/botonJugarHover.png"));
+
+        // -------------------------- Ranking
+        imgBtnRankingIdle = new ImageIcon(getClass().getResource("/Imagenes/MenuPrincipal/botonRankingIdle.png"));
+        imgBtnRankingHover = new ImageIcon(getClass().getResource("/Imagenes/MenuPrincipal/botonRankingClicked.png"));
+        imgBtnRankingClicked = new ImageIcon(getClass().getResource("/Imagenes/MenuPrincipal/botonRankingHover.png"));
+
+    }
+
+    /**
+     * Configura el JPanel.
+     */
     private void configurarEspacio(){
+        this.setBounds(0, 0, 800, 900);
+        this.setFocusable(true);
         this.setBackground(Color.BLACK);
         this.setLayout(null);
     }
+
+    /**
+     * Configura los Listeners para los inputs.
+     */
+    private void configurarListeners(){
+        // -------------------------- Boton Jugar
+        btnJugar.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) {
+                btnJugar.setIcon(imgBtnJugarHover);      // Similar al hoverhover
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                btnJugar.setIcon(imgBtnJugarIdle); // normal
+            }
+            @Override public void mousePressed(MouseEvent e) {
+                btnJugar.setIcon(imgBtnJugarClicked);// active / click
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                // restaurar al estado hover o normal según el cursor esté dentro
+                if (btnJugar.contains(e.getPoint())){
+                    btnJugar.setIcon(imgBtnJugarHover);
+                }
+                else {
+                    btnJugar.setIcon(imgBtnJugarClicked);
+                }
+            }
+        });
+
+        // -------------------------- Boton Ranking
+        btnRanking.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) {
+                btnRanking.setIcon(imgBtnRankingHover);      // Similar al hoverhover
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                btnRanking.setIcon(imgBtnRankingIdle); // normal
+            }
+            @Override public void mousePressed(MouseEvent e) {
+                btnRanking.setIcon(imgBtnRankingClicked);// active / click
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                // restaurar al estado hover o normal según el cursor esté dentro
+                if (btnRanking.contains(e.getPoint())){
+                    btnRanking.setIcon(imgBtnRankingHover);
+                }
+                else {
+                    btnRanking.setIcon(imgBtnRankingClicked);
+                }
+            }
+        });
+
+        // -------------------------- Input por teclado
+        this.addKeyListener(new KeyAdapter() {
+            public void keyPressed(KeyEvent e) {
+                // Cerrar el juego con Escape
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    System.out.println("Saliendo...");
+                    System.exit(0);
+                }
+            }
+        });
+    }
+
+    // --------------------------
+    // Override
+    // --------------------------
 
     @Override
     public void addNotify() {
