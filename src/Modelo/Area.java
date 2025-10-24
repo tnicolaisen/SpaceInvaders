@@ -5,10 +5,8 @@ import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
 import Utilidades.Direcciones;
 import Utilidades.Punto;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+
+import java.util.*;
 
 /**
  * Área en donde se ejecuta lógicamente el juego.
@@ -147,7 +145,11 @@ public class Area {
                 if (!partidaPerdida){
                     moverProyectiles();
                     verificarColisionProyectiles();
-                    notificarVisual();}
+                    // NOTIFICAR primero (debe recibir inactivo=true)
+                    notificarVisual();
+                    // Eliminar después, evitando que la vista "pierda" la notificación de inactivo
+                    eliminarInactivos();
+                }
             }
         };
         timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 10);
@@ -198,10 +200,10 @@ public class Area {
     private void notificarVisual(){
 
         // Notificación a la vista por medio del obsevador
-        for (int i = 0; i < entidades.size(); i++) {
-            if (entidades.get(i) != null) {
-                observador.actualizarPosiciones(i, entidades.get(i).getPunto(), entidades.get(i).getDimension(), entidades.get(i).getTipoEntidad(), entidades.get(i).getInactivo());
-            }
+        for (Map.Entry<Integer, Entidad> entry : entidades.entrySet()) {
+            Integer id = entry.getKey();
+            Entidad entidad = entry.getValue();
+            observador.actualizarPosiciones(id, entidad.getPunto(), entidad.getDimension(), entidad.getTipoEntidad(), entidad.getInactivo());
         }
     }
 
@@ -247,6 +249,24 @@ public class Area {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Elimina todas las Entidades inactivas del diccionario de Entidades.
+     */
+    private void eliminarInactivos(){
+        // Creo una lista para guardar los IDs de los eliminados
+        List<Integer> inactivos = new ArrayList<Integer>();
+
+        for (Map.Entry entidad: entidades.entrySet()){
+            if (((Entidad) entidad.getValue()).getInactivo()){
+                inactivos.add((Integer) entidad.getKey());
+            }
+        }
+
+        for (Integer inactivo : inactivos){
+            entidades.remove(inactivo);
         }
     }
 }
