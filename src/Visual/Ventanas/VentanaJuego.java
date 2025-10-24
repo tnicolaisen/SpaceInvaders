@@ -4,12 +4,16 @@ import Utilidades.Punto;
 import Utilidades.Dimension;
 import java.awt.*;
 
-public class Ventana extends JFrame {
+public class VentanaJuego extends JFrame {
     private Punto punto;
     private Dimension dimension;
     JPanel espacio;
 
-    public Ventana(JPanel espacio) {
+    /**
+     * Constructor. Genera una ventana en donde se ejecutará Space Invaders.
+     * @param espacio
+     */
+    public VentanaJuego(JPanel espacio) {
         this.espacio = espacio;
         this.setContentPane(espacio);
         configurarVentana();

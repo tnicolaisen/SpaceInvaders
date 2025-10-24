@@ -6,5 +6,9 @@ public interface Daniable {
      */
     public void serDaniado();
 
+    /**
+     * Devuelve la vida restante del objeto.
+     * @return Vida restante.
+     */
     public int getVida();
 }

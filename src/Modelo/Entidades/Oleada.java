@@ -68,6 +68,10 @@ public class Oleada extends Entidad {
         return naves;
     }
 
+    /**
+     * Hace que se genere un nuevo Proyectil desde una Nave aleatoria del borde inferior de la Oleada.
+     * @return Proyectil disparado.
+     */
     public Proyectil dispararNaveAleatoria(){
         Nave naveAleatoria = matrizNaves.get(2).get(random.nextInt(4));
         while (naveAleatoria.getInactivo()){
@@ -76,6 +80,9 @@ public class Oleada extends Entidad {
         return naveAleatoria.disparar();
     }
 
+    /**
+     * Permite que se actualicen las posiciones de las Naves según la posición de la Oleada.
+     */
     public void actualizarPosicionNaves(){
         for (int i = 0; i < 3; i++){
             for (int j = 0; j < 5; j++){

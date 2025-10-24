@@ -1,5 +1,4 @@
 package Visual.Sprites;
-import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
 import Utilidades.Punto;
 import javax.swing.JLabel;

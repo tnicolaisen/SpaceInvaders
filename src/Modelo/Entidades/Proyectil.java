@@ -35,6 +35,9 @@ public class Proyectil extends Entidad implements Daniable {
         }
     };
 
+    /**
+     * Mata al proyectil.
+     */
     public void serDaniado(){
         vida -= 100;
         this.setInactivo(true);

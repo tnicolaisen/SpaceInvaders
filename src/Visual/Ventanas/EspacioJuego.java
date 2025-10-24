@@ -16,6 +16,10 @@ public class EspacioJuego extends JPanel implements Observador {
     Controlador controlador;
     Map<Integer, Sprite> sprites;
 
+    /**
+     * Constructor. Crea un espacio en donde se renderizará Space Invaders.
+     * @param controlador Controlador que administrará al EspacioJuego.
+     */
     public EspacioJuego(Controlador controlador) {
         this.controlador = controlador;
 
@@ -36,11 +40,17 @@ public class EspacioJuego extends JPanel implements Observador {
         this.requestFocusInWindow();
     }
 
+    /**
+     * Configura el fondo y el layout del JPanel.
+     */
     private void configurarEspacioJuego() {
         this.setBackground(Color.BLACK);
         this.setLayout(null);
     }
 
+    /**
+     * Genera los Listeners que permite al usuario interactuar con el juego.
+     */
     private void configurarListener(){
         this.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -57,6 +67,14 @@ public class EspacioJuego extends JPanel implements Observador {
         });
     }
 
+    /**
+     * Actualiza la posición del objeto pasado según los paráemtros.
+     * @param id ID del objeto a cambiar.
+     * @param punto Posición en el espacio del objeto a cambiar.
+     * @param dimension Ancho y alto del objeto a cambiar.
+     * @param tipo Tipo de objeto a cambiar.
+     * @param inactivo Si el objeto está inactivo o no.
+     */
     @Override
     public void actualizarPosiciones(int id, Punto punto, Dimension dimension, TiposEntidades tipo, boolean inactivo) {
         if (sprites.containsKey(id)) {

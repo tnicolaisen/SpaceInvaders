@@ -5,8 +5,12 @@ import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
 import Utilidades.Direcciones;
 import Utilidades.Punto;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Área en donde se ejecuta lógicamente el juego.
@@ -80,7 +84,7 @@ public class Area {
     public void moverJugadorDerecha(){
         if (entidades.get(7).getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
             entidades.get(7).moverseDerecha(20);
-            System.out.println("Se movió el jugador a la derecha. Posición: " + entidades.get(7).getPunto());
+
         }
     }
 
@@ -90,7 +94,6 @@ public class Area {
     public void moverJugadorIzquierda(){
         if (entidades.get(7).getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
             entidades.get(7).moverseIzquierda(20);
-            System.out.println("Se movió el jugador a la izquierda. Posición: " + entidades.get(7).getPunto());
         }
     }
 
@@ -100,7 +103,6 @@ public class Area {
     public void dispararJugador(){
         entidades.put(contadorEntidades, ((Bateria) entidades.get(7)).disparar());
         contadorEntidades++;
-        System.out.println("Se disparó un proyectil. Entidades: " + entidades.size());
     }
 
     // ------------------------------------
@@ -215,7 +217,7 @@ public class Area {
                 }
             }
         } else {
-            System.out.println("Partida perdida");
+            System.out.println("¡Fallaste!: Partida perdida");
             estadoPartida = EstadoPartida.PERDIDA;
         }
         oleada.actualizarPosicionNaves();

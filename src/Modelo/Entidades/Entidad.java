@@ -34,14 +34,34 @@ public abstract class Entidad {
      */
     public TiposEntidades getTipoEntidad(){return tipo;}
 
+    /**
+     * Devuelve el ancho alto de la entidad en Dimension.
+     * @return Dimension de la Entidad.
+     */
     public Dimension getDimension(){return dimension;}
 
+    /**
+     * Devuelve la ubicación en el espacio medido en píxeles de la Entidad.
+     * @return Punto en el espacio de la Entidad.
+     */
     public Punto getPunto(){return punto;}
 
+    /**
+     * Sirve para saber si una entodidad está inactiva.
+     * @return Valro booleano para saber si una entidad está inactiva.
+     */
     public boolean getInactivo(){return inactivo;}
 
+    /**
+     * Permite cambiar el valor de inactivo.
+     * @param inactivo Nuevo valor para inactivo.
+     */
     protected void setInactivo(boolean inactivo){this.inactivo = inactivo;}
 
+    /**
+     * Permite cambiar de posición a la Entidad a un nuevo Punto.
+     * @param punto Punto nuevo a donde colocar la Entidad.
+     */
     protected void setPunto(Punto punto){this.punto = punto;}
 
     // --------------------
