@@ -1,5 +1,6 @@
 package Modelo;
 import Modelo.Entidades.*;
+import Modelo.Interfaces.Daniable;
 import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
 import Utilidades.Direcciones;
@@ -221,22 +222,28 @@ public class Area {
      * Verifica si un proyectil colisionó con una Nave, un Muro o la Batería.
      */
     private void verificarColisionProyectiles(){
-        // Colisión de los proyectiles
-        for (Map.Entry<Integer, Entidad> proyectil : entidades.entrySet()){
-            if (proyectil.getValue() instanceof Proyectil){
-                for (Entidad objetivo : entidades.values()){
-                    if (objetivo instanceof Nave && proyectil.getValue().colisionoCon(objetivo) && !proyectil.getValue().getInactivo() && !objetivo.getInactivo()){
-                        ((Nave) objetivo).serDaniado();
-                        ((Proyectil) proyectil.getValue()).serDaniado();
-                        System.out.println("Una nave ha sido dañada.");
-                    } else if (objetivo instanceof Muro && proyectil.getValue().colisionoCon(objetivo) && !proyectil.getValue().getInactivo() && !objetivo.getInactivo()){
-                        ((Muro) objetivo).serDaniado();
-                        ((Proyectil) proyectil.getValue()).serDaniado();
-                        System.out.println("Un muro ha sido dañado.");
-                    } else if (objetivo instanceof Bateria && proyectil.getValue().colisionoCon(objetivo) && !proyectil.getValue().getInactivo() && !objetivo.getInactivo()){
-                        ((Bateria) objetivo).serDaniado();
-                        ((Proyectil) proyectil.getValue()).serDaniado();
-                        System.out.println("Una nave ha sido dañada.");
+
+        // Recorro el diccionario de entidades en busca de un proyectil.
+        for (Map.Entry posibleProyectil: entidades.entrySet()){
+            if (posibleProyectil.getValue() instanceof Proyectil){
+
+                // Guardo los datos del proyectil
+                int idProyectil = ((Integer) posibleProyectil.getKey());
+                Proyectil proyectil = (Proyectil) posibleProyectil.getValue();
+
+                // Recorro el diccionario de entidades, obviando Proyectiles, en búsqueda de Naves, Muros, y Baterías.
+                for (Map.Entry posibleObjetivo : entidades.entrySet()){
+                    if (!(posibleObjetivo.getValue() instanceof Proyectil) && posibleObjetivo.getValue() instanceof Daniable){
+
+                        // Guardo los datos del posible objetivo
+                        int idObjetivo = ((Integer) posibleObjetivo.getKey());
+                        Entidad objetivo = (Entidad) posibleObjetivo.getValue();
+
+                        // Daño ambos elementos en caso de que hayan colisionado
+                        if (proyectil.colisionoCon(objetivo)){
+                            ((Daniable) proyectil).serDaniado();
+                            ((Daniable) objetivo).serDaniado();
+                        }
                     }
                 }
             }
