@@ -31,7 +31,7 @@ public class Area {
 
     // Observador
     private Observador observador;
-    private boolean partidaPerdida;
+    private EstadoPartida estadoPartida;
 
     // Timers
     Timer timerEjecucion;
@@ -57,7 +57,7 @@ public class Area {
         margenIzquierda = 50;
         margenDerecha = 750;
         margenAbajo = 680;
-        partidaPerdida = false;
+        estadoPartida = EstadoPartida.EN_CURSO;
 
         // Generación de las entidades
         registrarObservador(observador);
@@ -144,13 +144,15 @@ public class Area {
         taskEjecucion = new TimerTask() {
             @Override
             public void run() {
-                if (!partidaPerdida){
+                if (estadoPartida == EstadoPartida.EN_CURSO){
                     moverProyectiles();
                     verificarColisionProyectiles();
-                    // NOTIFICAR primero (debe recibir inactivo=true)
                     notificarVisual();
-                    // Eliminar después, evitando que la vista "pierda" la notificación de inactivo
                     eliminarInactivos();
+                    if (oleada.getCantidadDeNavesVivas() == 0){
+                        estadoPartida = EstadoPartida.GANADA;
+                        System.out.println("Victoria: ¡Partida ganada!");
+                    }
                 }
             }
         };
@@ -160,7 +162,7 @@ public class Area {
         taskOleada = new TimerTask() {
             @Override
             public void run() {
-                if (!partidaPerdida) {moverOleada();}
+                if (estadoPartida == EstadoPartida.EN_CURSO) {moverOleada();}
             }
         };
         timerOleada.scheduleAtFixedRate(taskOleada, 0, 300);
@@ -188,8 +190,8 @@ public class Area {
                 }
             }
         } else {
-            System.out.println("Fin de la partida");
-            partidaPerdida = true;
+            System.out.println("Partida perdida");
+            estadoPartida = EstadoPartida.PERDIDA;
         }
 
         oleada.actualizarPosicionNaves();
