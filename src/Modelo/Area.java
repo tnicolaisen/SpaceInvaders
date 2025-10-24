@@ -47,6 +47,8 @@ public class Area {
 
     /**
      * Constructor.
+     * @param observador Elemento que funcionará como observador. El objeto debe implementar la interfaz Observador.
+     * @param dificultad Dificultad en la que se juega.
      */
     public Area(Observador observador, int dificultad) {
 
@@ -62,7 +64,7 @@ public class Area {
         generarEntidades();
 
         // Timers
-        configurarTimers();
+        ejecutarTimers();
     }
 
     // ------------------------------------
@@ -135,9 +137,9 @@ public class Area {
     }
 
     /**
-     * Configura los dos timers que utiliza el Area.
+     * Ejecuta los timers.
      */
-    private void configurarTimers(){
+    private void ejecutarTimers(){
         timerEjecucion = new Timer();
         taskEjecucion = new TimerTask() {
             @Override
