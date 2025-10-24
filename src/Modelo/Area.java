@@ -229,6 +229,9 @@ public class Area {
             if (entidad instanceof Proyectil){ // Similar al casteo. Aquí simplemente especifico la entidad.
                 Proyectil proyectil = (Proyectil) entidad;
                 proyectil.continuarTrayectoria();
+                if (proyectil.getPunto().getPosicionY() < 0 || proyectil.getPunto().getPosicionY() > this.dimension.getAlto()){
+                    proyectil.serDaniado();
+                }
             }
         }
     }
