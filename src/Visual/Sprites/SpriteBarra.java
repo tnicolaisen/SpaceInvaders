@@ -13,6 +13,6 @@ public final class SpriteBarra extends Sprite{
      * @param punto Punto de aparición de la representación gráfica (Esquina superior izquierda).
      */
     public SpriteBarra(Punto punto) {
-        super(punto, new Dimension(Tamanio.BARRA_ANCHO, Tamanio.BARRA_ALTO), "/Imagenes/barra.png");
+        super(punto, new Dimension(Tamanio.BARRA_ANCHO, Tamanio.BARRA_ALTO), "/Imagenes/Partida/barra.png");
     }
 }

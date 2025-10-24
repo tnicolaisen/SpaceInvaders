@@ -1,4 +1,4 @@
-package Visual.Ventanas;
+package Visual.Contenedores;
 import Controlador.Controlador;
 import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;

@@ -59,7 +59,7 @@ public class Area {
     public Area(Observador observador, int dificultad) {
 
         // Propiedades del Area misma
-        dimension = new Dimension(1280, 1024);
+        dimension = new Dimension(800, 900);
         margenIzquierda = 50;
         margenDerecha = 750;
         margenAbajo = 680;

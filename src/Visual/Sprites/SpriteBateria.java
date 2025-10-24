@@ -13,6 +13,6 @@ public final class SpriteBateria extends Sprite {
      * @param punto Punto de aparición de la representación gráfica (Esquina superior izquierda).
      */
     public SpriteBateria(Punto punto) {
-        super(punto, new Dimension(Tamanio.BATERIA_ANCHO, Tamanio.BATERIA_ALTO), "/Imagenes/bateria.png");
+        super(punto, new Dimension(Tamanio.BATERIA_ANCHO, Tamanio.BATERIA_ALTO), "/Imagenes/Partida/bateria.png");
     }
 }

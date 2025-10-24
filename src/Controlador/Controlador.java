@@ -1,6 +1,6 @@
 package Controlador;
 import Modelo.Area;
-import Visual.Ventanas.EspacioJuego;
+import Visual.Contenedores.EspacioJuego;
 import Visual.Ventanas.VentanaJuego;
 
 public class Controlador {

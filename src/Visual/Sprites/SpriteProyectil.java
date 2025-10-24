@@ -13,6 +13,6 @@ public final class SpriteProyectil extends Sprite {
      * @param punto Punto de aparición de la representación gráfica (Esquina superior izquierda).
      */
     public SpriteProyectil(Punto punto) {
-        super(punto, new Dimension(Tamanio.PROYECTIL_ANCHO, Tamanio.PROYECTIL_ALTO), "/Imagenes/proyectil.png");
+        super(punto, new Dimension(Tamanio.PROYECTIL_ANCHO, Tamanio.PROYECTIL_ALTO), "/Imagenes/Partida/proyectil.png");
     }
 }

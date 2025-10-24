@@ -13,6 +13,6 @@ public final class SpriteNave extends Sprite{
      * @param punto Punto de aparición de la representación gráfica (Esquina superior izquierda).
      */
     public SpriteNave(Punto punto) {
-        super(punto, new Dimension(Tamanio.NAVE_ANCHO, Tamanio.NAVE_ALTO), "/Imagenes/nave.png");
+        super(punto, new Dimension(Tamanio.NAVE_ANCHO, Tamanio.NAVE_ALTO), "/Imagenes/Partida/nave.png");
     }
 }
