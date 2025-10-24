@@ -3,12 +3,14 @@ import Utilidades.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Oleada de las Naves enemigas
  */
 public class Oleada extends Entidad {
     private List<List<Nave>> matrizNaves = new ArrayList<List<Nave>>();
+    private Random random;
 
     /**
      * Constructor.
@@ -16,6 +18,7 @@ public class Oleada extends Entidad {
      */
     public Oleada(Punto punto) {
         super(punto, new Dimension(Tamanio.OLEADA_ANCHO, Tamanio.OLEADA_ALTO), TiposEntidades.NAVE);
+        random = new Random();
 
         // Se llena la matriz de la nave, calculando sus posiciones con un margen de 20x20 pixeles entre ellas.
         for (int i = 0; i < 3; i++){
@@ -63,6 +66,14 @@ public class Oleada extends Entidad {
             }
         }
         return naves;
+    }
+
+    public Proyectil dispararNaveAleatoria(){
+        Nave naveAleatoria = matrizNaves.get(2).get(random.nextInt(4));
+        while (naveAleatoria.getInactivo()){
+            naveAleatoria = matrizNaves.get(2).get(random.nextInt(4));
+        }
+        return naveAleatoria.disparar();
     }
 
     public void actualizarPosicionNaves(){

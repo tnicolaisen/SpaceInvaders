@@ -36,8 +36,10 @@ public class Area {
     // Timers
     Timer timerEjecucion;
     TimerTask taskEjecucion;
-    Timer timerOleada;
-    TimerTask taskOleada;
+    Timer timerMovimientoOleada;
+    TimerTask taskMovimientoOleada;
+    Timer timerDisparoOleada;
+    TimerTask taskDisparoOleada;
 
     /**
      * Registra el elemento pasado como observador.
@@ -162,8 +164,8 @@ public class Area {
         timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 100);
 
         // Movimiento de la oleada
-        timerOleada = new Timer();
-        taskOleada = new TimerTask() {
+        timerMovimientoOleada = new Timer();
+        taskMovimientoOleada = new TimerTask() {
             @Override
             public void run() {
                 if (estadoPartida == EstadoPartida.EN_CURSO) {
@@ -171,7 +173,19 @@ public class Area {
                 }
             }
         };
-        timerOleada.scheduleAtFixedRate(taskOleada, 0, 13);
+        timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, 13);
+
+        // Disparo de la oleada
+        timerDisparoOleada = new Timer();
+        taskDisparoOleada = new TimerTask() {
+            @Override
+            public void run() {
+                if (estadoPartida == EstadoPartida.EN_CURSO) {
+                    dispararNave();
+                }
+            }
+        };
+        timerDisparoOleada.scheduleAtFixedRate(taskDisparoOleada, 0, 3000);
     }
 
     /**
@@ -213,7 +227,7 @@ public class Area {
     private void notificarVisual(){
 
         // Notificación a la vista por medio del obsevador
-        for (Map.Entry<Integer, Entidad> entry : entidades.entrySet()) {
+        for (Map.Entry<Integer, Entidad> entry : new ArrayList<>(entidades.entrySet())) { // Ahora se pasa una copia en vez de trabajar sobre el mismo diccionario para evitar ConcurrentModificationException
             Integer id = entry.getKey();
             Entidad entidad = entry.getValue();
             observador.actualizarPosiciones(id, entidad.getPunto(), entidad.getDimension(), entidad.getTipoEntidad(), entidad.getInactivo());
@@ -241,26 +255,31 @@ public class Area {
      */
     private void verificarColisionProyectiles(){
 
-        // Recorro el diccionario de entidades en busca de un proyectil.
-        for (Map.Entry posibleProyectil: entidades.entrySet()){
-            if (posibleProyectil.getValue() instanceof Proyectil){
+        // Se hace una copia del diccionario de entidades para evitar ConcurrentModification
+        List<Map.Entry<Integer, Entidad>> proyectilesSnapshot = new ArrayList<>(entidades.entrySet());
 
-                // Guardo los datos del proyectil
-                int idProyectil = ((Integer) posibleProyectil.getKey());
+        // La recorro en busca de proyectiles
+        for (Map.Entry<Integer, Entidad> posibleProyectil : proyectilesSnapshot) {
+            if (posibleProyectil.getValue() instanceof Proyectil) {
+
+                // Datos del proyectil
+                int idProyectil = posibleProyectil.getKey();
                 Proyectil proyectil = (Proyectil) posibleProyectil.getValue();
 
-                // Recorro el diccionario de entidades, obviando Proyectiles, en búsqueda de Naves, Muros, y Baterías.
-                for (Map.Entry posibleObjetivo : entidades.entrySet()){
-                    if (!(posibleObjetivo.getValue() instanceof Proyectil) && posibleObjetivo.getValue() instanceof Daniable){
+                // Para comprobar objetivos, también trabajamos sobre una copia (evita ConcurrentModification si se añaden/producen cambios)
+                List<Map.Entry<Integer, Entidad>> objetivosSnapshot = new ArrayList<>(entidades.entrySet());
+                for (Map.Entry<Integer, Entidad> posibleObjetivo : objetivosSnapshot) {
+                    Entidad posible = posibleObjetivo.getValue();
 
-                        // Guardo los datos del posible objetivo
-                        int idObjetivo = ((Integer) posibleObjetivo.getKey());
-                        Entidad objetivo = (Entidad) posibleObjetivo.getValue();
+                    if (!(posible instanceof Proyectil) && posible instanceof Daniable) {
 
-                        // Daño ambos elementos en caso de que hayan colisionado
-                        if (proyectil.colisionoCon(objetivo)){
+                        int idObjetivo = posibleObjetivo.getKey();
+                        Entidad objetivo = posible;
+
+                        if (proyectil.colisionoCon(objetivo)) {
                             ((Daniable) proyectil).serDaniado();
                             ((Daniable) objetivo).serDaniado();
+                            break;
                         }
                     }
                 }
@@ -284,5 +303,13 @@ public class Area {
         for (Integer inactivo : inactivos){
             entidades.remove(inactivo);
         }
+    }
+
+    /**
+     * Hace que una de las naves de la tercer fila dispare, en caso de existir.
+     */
+    private void dispararNave(){
+        entidades.put(contadorEntidades,oleada.dispararNaveAleatoria());
+        contadorEntidades++;
     }
 }
