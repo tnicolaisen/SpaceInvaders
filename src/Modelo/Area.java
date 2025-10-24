@@ -241,7 +241,7 @@ public class Area {
      */
     private void moverProyectiles(){
         // Movimiento de los proyectiles
-        for (Entidad entidad : entidades.values()){
+        for (Entidad entidad : new ArrayList<>(entidades.values())){
             if (entidad instanceof Proyectil){ // Similar al casteo. Aquí simplemente especifico la entidad.
                 Proyectil proyectil = (Proyectil) entidad;
                 proyectil.continuarTrayectoria();
@@ -296,9 +296,9 @@ public class Area {
         // Creo una lista para guardar los IDs de los eliminados
         List<Integer> inactivos = new ArrayList<Integer>();
 
-        for (Map.Entry entidad: entidades.entrySet()){
-            if (((Entidad) entidad.getValue()).getInactivo()){
-                inactivos.add((Integer) entidad.getKey());
+        for (Map.Entry<Integer, Entidad> entry : new ArrayList<>(entidades.entrySet())){
+            if (entry.getValue().getInactivo()){
+                inactivos.add(entry.getKey());
             }
         }
 
