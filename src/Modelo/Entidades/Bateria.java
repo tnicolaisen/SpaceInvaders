@@ -42,7 +42,7 @@ public class Bateria extends Entidad implements Disparador, Daniable {
         return new Proyectil(
                 new Punto(
                         this.getEsquinaSuperiorIzquierda().getPosicionX() + 18,
-                        this.getEsquinaSuperiorIzquierda().getPosicionY() - 30
+                        this.getEsquinaSuperiorIzquierda().getPosicionY() - 15
                 ), Direcciones.ARRIBA
         );
     }

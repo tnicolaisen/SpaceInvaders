@@ -58,6 +58,7 @@ public class Area {
         margenDerecha = 750;
         margenAbajo = 680;
         estadoPartida = EstadoPartida.EN_CURSO;
+        this.dificultad = dificultad;
 
         // Generación de las entidades
         registrarObservador(observador);
@@ -76,7 +77,7 @@ public class Area {
      */
     public void moverJugadorDerecha(){
         if (entidades.get(7).getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
-            entidades.get(7).moverseDerecha(5);
+            entidades.get(7).moverseDerecha(20);
             System.out.println("Se movió el jugador a la derecha. Posición: " + entidades.get(7).getPunto());
         }
     }
@@ -86,7 +87,7 @@ public class Area {
      */
     public void moverJugadorIzquierda(){
         if (entidades.get(7).getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
-            entidades.get(7).moverseIzquierda(5);
+            entidades.get(7).moverseIzquierda(20);
             System.out.println("Se movió el jugador a la izquierda. Posición: " + entidades.get(7).getPunto());
         }
     }
@@ -140,6 +141,7 @@ public class Area {
      * Ejecuta los timers.
      */
     private void ejecutarTimers(){
+        // Ejecución lógica del Area.
         timerEjecucion = new Timer();
         taskEjecucion = new TimerTask() {
             @Override
@@ -149,6 +151,7 @@ public class Area {
                     verificarColisionProyectiles();
                     notificarVisual();
                     eliminarInactivos();
+
                     if (oleada.getCantidadDeNavesVivas() == 0){
                         estadoPartida = EstadoPartida.GANADA;
                         System.out.println("Victoria: ¡Partida ganada!");
@@ -156,22 +159,30 @@ public class Area {
                 }
             }
         };
-        timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 10);
+        timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 100);
 
+        // Movimiento de la oleada
         timerOleada = new Timer();
         taskOleada = new TimerTask() {
             @Override
             public void run() {
-                if (estadoPartida == EstadoPartida.EN_CURSO) {moverOleada();}
+                if (estadoPartida == EstadoPartida.EN_CURSO) {
+                    moverOleada();
+                }
             }
         };
-        timerOleada.scheduleAtFixedRate(taskOleada, 0, 300);
+        timerOleada.scheduleAtFixedRate(taskOleada, 0, 13);
     }
 
     /**
      * Ejecuta la lógica de movimiento de la Oleada (de naves).
      */
     private void moverOleada(){
+        // Utilizo el potenciador para poder incrementar la velocidad de movimiento de la Oleada cuando queden 10 y 5 naves.
+        int potenciador = 1;
+        if (oleada.getCantidadDeNavesVivas() <= 10 && oleada.getCantidadDeNavesVivas() > 5){potenciador = 2;}
+        else if (oleada.getCantidadDeNavesVivas() <= 5) {potenciador = 3;}
+
         // ------------------------ Movimiento de la oleada
         if (oleada.getEsquinaInferiorIzquierda().getPosicionY() < margenAbajo || oleada.getEsquinaInferiorDerecha().getPosicionX() < margenDerecha){
             // -------- Cuando llega a los bordes
@@ -184,18 +195,16 @@ public class Area {
             } else {
                 // -------- Movimiento horizontal
                 if (direccionOleada == Direcciones.IZQUIERDA){
-                    oleada.moverseIzquierda(50);
+                    oleada.moverseIzquierda(potenciador * dificultad);
                 } else if (direccionOleada == Direcciones.DERECHA){
-                    oleada.moverseDerecha(50);
+                    oleada.moverseDerecha(potenciador * dificultad);
                 }
             }
         } else {
             System.out.println("Partida perdida");
             estadoPartida = EstadoPartida.PERDIDA;
         }
-
         oleada.actualizarPosicionNaves();
-        System.out.println("La oleada se movio a :" + oleada.getPunto());
     }
 
     /**

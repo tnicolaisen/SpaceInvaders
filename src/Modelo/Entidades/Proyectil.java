@@ -18,7 +18,7 @@ public class Proyectil extends Entidad implements Daniable {
     public Proyectil(Punto punto, Direcciones direccion) {
         super(punto, new Dimension(Tamanio.PROYECTIL_ANCHO, Tamanio.PROYECTIL_ALTO), TiposEntidades.PROYECTIL);
         this.direccion = direccion;
-        this.velocidad = 3;
+        this.velocidad = 25;
         this.vida = 100;
     }
 
