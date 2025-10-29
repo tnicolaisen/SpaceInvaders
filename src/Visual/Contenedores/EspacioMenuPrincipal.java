@@ -1,6 +1,8 @@
 package Visual.Contenedores;
 import Controlador.Controlador;
 import Modelo.Area;
+import Modelo.Dificultad;
+import Visual.Ventanas.VentanaDificultad;
 import Visual.Ventanas.VentanaJuego;
 
 import javax.swing.*;
@@ -54,6 +56,7 @@ public class EspacioMenuPrincipal extends JPanel {
         cargarElementos();
         cargarImagenesBotones();
         espacioJuego = new EspacioJuego(controlador);
+        // Inicializo Area pero sin forzar una dificultad (mantengo comportamiento por defecto).
         area = new Area(espacioJuego);
         configurarListeners();
 
@@ -211,7 +214,12 @@ public class EspacioMenuPrincipal extends JPanel {
                 else {
                     btnJugar.setIcon(imgBtnJugarClicked);
                 }
-                ventanaJuego = new VentanaJuego(espacioJuego);
+                // en lugar de JOptionPane...
+                Dificultad seleccionada = VentanaDificultad.mostrarDialogo(EspacioMenuPrincipal.this);
+                if (seleccionada != null) {
+                    area.setDificultad(seleccionada);
+                    ventanaJuego = new VentanaJuego(espacioJuego);
+                }
             }
         });
 

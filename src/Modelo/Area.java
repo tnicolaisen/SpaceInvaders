@@ -43,6 +43,10 @@ public class Area {
     Timer timerDisparoOleada;
     TimerTask taskDisparoOleada;
 
+    // Dificultad / intervalo de movimiento de la oleada (ms)
+    private Dificultad dificultad = Dificultad.MASTER;
+    private long intervaloOleada = 13; // valor por defecto (comportamiento previo)
+
     /**
      * Registra el elemento pasado como observador.
      * @param observador Observador a registrar.
@@ -52,7 +56,6 @@ public class Area {
     /**
      * Constructor.
      * @param observador Elemento que funcionará como observador. El objeto debe implementar la interfaz Observador.
-     * @param dificultad Dificultad en la que se juega.
      */
     public Area(Observador observador) {
 
@@ -69,6 +72,49 @@ public class Area {
 
         // Timers
         ejecutarTimers();
+    }
+
+    // -------------------------
+    // Nuevos métodos: Dificultad
+    // -------------------------
+    /**
+     * Ajusta la dificultad de la partida. Esto cambia la velocidad de movimiento
+     * de la oleada (se reprograma el timer de movimiento).
+     * @param dificultad dificultad seleccionada
+     */
+    public void setDificultad(Dificultad dificultad) {
+        if (dificultad == null) return;
+        this.dificultad = dificultad;
+        switch (dificultad) {
+            case CADETE:
+                intervaloOleada = 40; // más lento
+                break;
+            case GUERRERO:
+                intervaloOleada = 20; // medio
+                break;
+            case MASTER:
+            default:
+                intervaloOleada = 13; // rápido / por defecto anterior
+                break;
+        }
+        // Reprogramar timer de movimiento de la oleada con el nuevo intervalo
+        reprogramarTimerMovimientoOleada();
+    }
+
+    /**
+     * Reprograma (cancela y crea) el timer de movimiento de la oleada para usar el intervalo actual.
+     */
+    private void reprogramarTimerMovimientoOleada() {
+        // Cancelar timer previo si existe
+        if (timerMovimientoOleada != null) {
+            try {
+                timerMovimientoOleada.cancel();
+            } catch (Exception ignored) {}
+            timerMovimientoOleada = null;
+            taskMovimientoOleada = null;
+        }
+        // Crear uno nuevo
+        sincronizarMovimientoOleada();
     }
 
     // ------------------------------------
@@ -162,17 +208,8 @@ public class Area {
         };
         timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 100);
 
-        // Movimiento de la oleada
-        timerMovimientoOleada = new Timer();
-        taskMovimientoOleada = new TimerTask() {
-            @Override
-            public void run() {
-                if (estadoPartida == EstadoPartida.EN_CURSO) {
-                    moverOleada();
-                }
-            }
-        };
-        timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, 13);
+        // Movimiento de la oleada (usamos el método que programa el timer con el intervalo configurado)
+        sincronizarMovimientoOleada();
 
         // Disparo de la oleada
         timerDisparoOleada = new Timer();
@@ -185,6 +222,23 @@ public class Area {
             }
         };
         timerDisparoOleada.scheduleAtFixedRate(taskDisparoOleada, 0, 3000);
+    }
+
+    /**
+     * Programa el timer de movimiento de la oleada según movimientoIntervalMillis.
+     */
+    private void sincronizarMovimientoOleada() {
+        timerMovimientoOleada = new Timer();
+        taskMovimientoOleada = new TimerTask() {
+            @Override
+            public void run() {
+                if (estadoPartida == EstadoPartida.EN_CURSO) {
+                    moverOleada();
+                }
+            }
+        };
+        // Nota personal: scheduleAtFixedRate me permite realizar tareas de forma sincrónica cada un cierto intervalo de tiempo
+        timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, intervaloOleada);
     }
 
     /**
