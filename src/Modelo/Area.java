@@ -1,4 +1,5 @@
 package Modelo;
+
 import Modelo.Entidades.*;
 import Modelo.Interfaces.Daniable;
 import Modelo.Interfaces.Observador;
@@ -45,7 +46,10 @@ public class Area {
 
     // Dificultad / intervalo de movimiento de la oleada (ms)
     private Dificultad dificultad = Dificultad.MASTER;
-    private long intervaloOleada = 13; // valor por defecto (comportamiento previo)
+    private long movimientoIntervalMillis = 13; // valor por defecto (comportamiento previo)
+
+    // Estado de iniciado (si los timers están corriendo)
+    private boolean iniciado = false;
 
     /**
      * Registra el elemento pasado como observador.
@@ -70,16 +74,14 @@ public class Area {
         registrarObservador(observador);
         generarEntidades();
 
-        // Timers
-        ejecutarTimers();
     }
 
-    // -------------------------
-    // Nuevos métodos: Dificultad
-    // -------------------------
+    // -----------------------------------
+    // Nuevos métodos: Dificultad / inicio
+    // -----------------------------------
     /**
      * Ajusta la dificultad de la partida. Esto cambia la velocidad de movimiento
-     * de la oleada (se reprograma el timer de movimiento).
+     * de la oleada (se reprograma el timer de movimiento sólo si ya estaba creado).
      * @param dificultad dificultad seleccionada
      */
     public void setDificultad(Dificultad dificultad) {
@@ -87,18 +89,31 @@ public class Area {
         this.dificultad = dificultad;
         switch (dificultad) {
             case CADETE:
-                intervaloOleada = 40; // más lento
+                movimientoIntervalMillis = 40; // más lento
                 break;
             case GUERRERO:
-                intervaloOleada = 20; // medio
+                movimientoIntervalMillis = 20; // medio
                 break;
             case MASTER:
             default:
-                intervaloOleada = 13; // rápido / por defecto anterior
+                movimientoIntervalMillis = 13; // rápido / por defecto anterior
                 break;
         }
-        // Reprogramar timer de movimiento de la oleada con el nuevo intervalo
-        reprogramarTimerMovimientoOleada();
+        // Si el timer de movimiento ya existe, reprogramarlo con el nuevo intervalo.
+        if (timerMovimientoOleada != null) {
+            reprogramarTimerMovimientoOleada();
+        }
+    }
+
+    /**
+     * Inicia (lanza) los timers de la partida. Llamar una vez cuando el jugador
+     * presione JUGAR tras elegir la dificultad.
+     */
+    public void iniciar() {
+        if (!iniciado) {
+            ejecutarTimers();
+            iniciado = true;
+        }
     }
 
     /**
@@ -237,8 +252,7 @@ public class Area {
                 }
             }
         };
-        // Nota personal: scheduleAtFixedRate me permite realizar tareas de forma sincrónica cada un cierto intervalo de tiempo
-        timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, intervaloOleada);
+        timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, movimientoIntervalMillis);
     }
 
     /**

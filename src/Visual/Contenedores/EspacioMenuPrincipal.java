@@ -56,7 +56,8 @@ public class EspacioMenuPrincipal extends JPanel {
         cargarElementos();
         cargarImagenesBotones();
         espacioJuego = new EspacioJuego(controlador);
-        // Inicializo Area pero sin forzar una dificultad (mantengo comportamiento por defecto).
+        // Inicializo Area pero no inicio los timers: la partida se iniciará explícitamente
+        // cuando el jugador seleccione JUGAR y la dificultad.
         area = new Area(espacioJuego);
         configurarListeners();
 
@@ -214,10 +215,14 @@ public class EspacioMenuPrincipal extends JPanel {
                 else {
                     btnJugar.setIcon(imgBtnJugarClicked);
                 }
-                // en lugar de JOptionPane...
+                // Muestro los dialogos
                 Dificultad seleccionada = VentanaDificultad.mostrarDialogo(EspacioMenuPrincipal.this);
                 if (seleccionada != null) {
+                    // Aplico dificultad
                     area.setDificultad(seleccionada);
+                    // Inicio la lógica de la partida (arranca timers)
+                    area.iniciar();
+                    // Abre la ventana del juego
                     ventanaJuego = new VentanaJuego(espacioJuego);
                 }
             }
