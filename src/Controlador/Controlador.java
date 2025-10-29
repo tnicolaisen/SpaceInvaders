@@ -28,19 +28,8 @@ public class Controlador {
         }).start();
     }
 
-    /**
-     * Hace que el jugador se mueva hacia la derecha.
-     */
     public void moverseDerecha(){area.moverJugadorDerecha();}
-
-    /**
-     * Hace que el jugador se mueva hacia la izquierda.
-     */
     public void moverseIzquierda(){area.moverJugadorIzquierda();}
-
-    /**
-     * Hace que el jugador dispare.
-     */
     public void disparar(){area.dispararJugador();}
 
     /**
@@ -56,4 +45,14 @@ public class Controlador {
     public void cerrarVentanaDelJuego() {
         if (espacioMenuPrincipal != null) espacioMenuPrincipal.cerrarVentanaJuego();
     }
+
+    /**
+     * Carga créditos mediante el EspacioMenuPrincipal (UI) para luego poder jugar.
+     * @param cantidad créditos a cargar
+     */
+    public void cargarCreditos(int cantidad) {
+        if (espacioMenuPrincipal != null) espacioMenuPrincipal.cargarCreditos(cantidad);
+    }
+
+    public Area obtenerArea() { return area; }
 }

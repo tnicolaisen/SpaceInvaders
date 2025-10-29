@@ -1,4 +1,5 @@
 package Visual.Contenedores;
+
 import Controlador.Controlador;
 import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
@@ -31,10 +32,6 @@ public class EspacioJuego extends JPanel implements Observador {
     private final List<Actualizacion> colaActualizaciones;
     private boolean procesando;
 
-    /**
-     * Constructor. Crea un espacio en donde se renderizará Space Invaders.
-     * @param controlador Controlador que administrará al EspacioJuego.
-     */
     public EspacioJuego(Controlador controlador) {
         this.controlador = controlador;
         this.setFocusable(true);
@@ -51,17 +48,11 @@ public class EspacioJuego extends JPanel implements Observador {
         this.requestFocusInWindow();
     }
 
-    /**
-     * Configura el fondo y el layout del JPanel.
-     */
     private void configurarEspacioJuego() {
         this.setBackground(Color.BLACK);
         this.setLayout(null);
     }
 
-    /**
-     * Genera los Listeners que permite al usuario interactuar con el juego.
-     */
     private void configurarListener(){
         this.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -92,9 +83,6 @@ public class EspacioJuego extends JPanel implements Observador {
         });
     }
 
-    /**
-     * Limpia todos los sprites de la vista. Se encola la acción y se procesa en el EDT.
-     */
     public void limpiarSprites() {
         Actualizacion actualizacion = new Actualizacion();
         actualizacion.accion = Accion.LIMPIAR;
@@ -107,10 +95,6 @@ public class EspacioJuego extends JPanel implements Observador {
         }
     }
 
-    /**
-     * Indica a la vista que elimine el sprite asociado al id.
-     * @param id ID de la entidad eliminada.
-     */
     @Override
     public void eliminarEntidad(int id) {
         Actualizacion actualizacion = new Actualizacion();
@@ -125,14 +109,6 @@ public class EspacioJuego extends JPanel implements Observador {
         }
     }
 
-    /**
-     * Recibe la actualización de posición/dimensión/tipo/inactivo del modelo.
-     * @param id ID del objeto a cambiar.
-     * @param punto Posición en el espacio del objeto a cambiar.
-     * @param dimension Ancho y alto del objeto a cambiar.
-     * @param tipo Tipo de objeto a cambiar.
-     * @param inactivo Si el objeto está inactivo o no.
-     */
     @Override
     public void actualizarPosiciones(int id, Punto punto, Dimension dimension, TiposEntidades tipo, boolean inactivo) {
         Actualizacion actualizacion = new Actualizacion();
@@ -151,34 +127,38 @@ public class EspacioJuego extends JPanel implements Observador {
         }
     }
 
-    /**
-     * Notifica que la partida finalizó. Se solicita el nombre al usuario con un diálogo custom
-     * y se agrega al ranking si el jugador ingresó nombre.
-     * @param estado Estado en que finalizó la partida.
-     * @param puntaje Puntaje final obtenido.
-     */
     @Override
     public void partidaFinalizada(EstadoPartida estado, int puntaje) {
         if (!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(() -> partidaFinalizada(estado, puntaje));
             return;
         }
+
         String mensaje = estado == EstadoPartida.GANADA ? "Ganaste" : "Perdiste";
-        String nombre = VentanaFinPartida.mostrarDialogo(this, mensaje);
+        int creditosGanados = (estado == EstadoPartida.GANADA) ? 1 : 0;
+
+        String nombre = VentanaFinPartida.mostrarDialogo(this, mensaje, puntaje, creditosGanados);
         if (nombre == null) return;
+
         Jugador jugador = new Jugador(nombre);
         jugador.sumarPuntos(puntaje);
+
         Ranking.agregarJugador(jugador);
+
+        if (estado == EstadoPartida.GANADA) {
+            if (controlador != null) controlador.cargarCreditos(creditosGanados);
+        }
+
         List<Jugador> top = Ranking.obtenerTop(10);
         System.out.println("Ranking actualizado:");
         for (Jugador j : top) {
             System.out.println(j.getNombre() + " " + j.getPuntaje());
         }
+
+        Window window = SwingUtilities.getWindowAncestor(this);
+        if (window != null) window.dispose();
     }
 
-    /**
-     * Procesa la cola de actualizaciones en el EDT aplicando los cambios visuales.
-     */
     private void procesarCola() {
         for (;;) {
             Actualizacion actualizacion;

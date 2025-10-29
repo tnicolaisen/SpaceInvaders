@@ -4,6 +4,7 @@ import Modelo.Area;
 import Modelo.Dificultad;
 import Visual.Ventanas.VentanaDificultad;
 import Visual.Ventanas.VentanaJuego;
+import Visual.Ventanas.VentanaRanking;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,8 +27,7 @@ public class EspacioMenuPrincipal extends JPanel {
     private JLabel lblLogo;
     private JLabel lblSubtitulo;
     private JLabel lblCreditos;
-    private JLabel lblbCreditoDecena;
-    private JLabel lblbCreditoUnidad;
+    private JLabel lblCreditosDisplay;
 
     private JButton btnJugar;
     private JButton btnRanking;
@@ -38,6 +38,8 @@ public class EspacioMenuPrincipal extends JPanel {
     ImageIcon imgBtnRankingIdle;
     ImageIcon imgBtnRankingHover;
     ImageIcon imgBtnRankingClicked;
+
+    private int creditos = 0;
 
     /**
      * Constructor.
@@ -51,6 +53,7 @@ public class EspacioMenuPrincipal extends JPanel {
         espacioJuego = new EspacioJuego(controlador);
         area = new Area(espacioJuego);
         configurarListeners();
+        actualizarDisplayCreditos();
     }
 
     public Area getArea() {
@@ -58,9 +61,44 @@ public class EspacioMenuPrincipal extends JPanel {
     }
 
     /**
+     * Carga créditos (usa para integrar la UI de carga de créditos).
+     * @param cantidad cantidad de créditos a sumar (entero >= 0)
+     */
+    public void cargarCreditos(int cantidad) {
+        if (cantidad <= 0) return;
+        creditos += cantidad;
+        actualizarDisplayCreditos();
+    }
+
+    /**
+     * Consume un crédito para iniciar una partida. Devuelve true si había crédito y se consumió.
+     * @return true si se consumió un crédito.
+     */
+    public boolean consumirCreditoParaPartida() {
+        if (creditos <= 0) return false;
+        creditos--;
+        actualizarDisplayCreditos();
+        return true;
+    }
+
+    /**
+     * Devuelve creditos al saldo (por ejemplo si se decide reintegrar).
+     * @param cantidad cantidad a devolver.
+     */
+    public void devolverCreditos(int cantidad) {
+        if (cantidad <= 0) return;
+        creditos += cantidad;
+        actualizarDisplayCreditos();
+    }
+
+    /**
+     * Retorna la cantidad de creditos actualmente cargados.
+     * @return creditos
+     */
+    public int obtenerCreditos() { return creditos; }
+
+    /**
      * Reinicia el Area a su estado inicial (se usa cuando se cierra la ventana del juego).
-     * Ahora: limpiamos la vista primero (EDT) y ejecutamos la reinicialización del modelo en un hilo de fondo
-     * para evitar bloquear el EDT si algún Timer-thread aún tiene locks en curso.
      */
     public void reiniciarArea() {
         if (espacioJuego != null) {
@@ -90,8 +128,11 @@ public class EspacioMenuPrincipal extends JPanel {
         }
     }
 
-    // El resto del archivo (cargarElementos, cargarImagenesBotones, configurarEspacio, configurarListeners, etc.)
-    // permanece igual que antes; no se modificaron.
+    private void actualizarDisplayCreditos() {
+        String texto = String.valueOf(creditos);
+        lblCreditosDisplay.setText(texto);
+    }
+
     private void cargarElementos(){
         lblLogo = new JLabel();
         lblLogo.setVisible(true);
@@ -128,19 +169,13 @@ public class EspacioMenuPrincipal extends JPanel {
         lblCreditos.setIcon(new ImageIcon(creditosImgUrl));
         this.add(lblCreditos);
 
-        lblbCreditoDecena = new JLabel();
-        lblbCreditoDecena.setVisible(true);
-        lblbCreditoDecena.setBounds(513, 592, 24, 28);
-        java.net.URL creditoDecenaImgUrl = getClass().getResource("/Imagenes/Numeros/0.png");
-        lblbCreditoDecena.setIcon(new ImageIcon(creditoDecenaImgUrl));
-        this.add(lblbCreditoDecena);
-
-        lblbCreditoUnidad = new JLabel();
-        lblbCreditoUnidad.setVisible(true);
-        lblbCreditoUnidad.setBounds(543, 592, 24, 28);
-        java.net.URL creditoUnidadImgUrl = getClass().getResource("/Imagenes/Numeros/0.png");
-        lblbCreditoUnidad.setIcon(new ImageIcon(creditoUnidadImgUrl));
-        this.add(lblbCreditoUnidad);
+        lblCreditosDisplay = new JLabel("0", SwingConstants.CENTER);
+        lblCreditosDisplay.setVisible(true);
+        lblCreditosDisplay.setBounds(513, 592, 54, 28);
+        lblCreditosDisplay.setForeground(new Color(0xFFD300));
+        lblCreditosDisplay.setFont(new Font("Monospaced", Font.BOLD, 18));
+        lblCreditosDisplay.setOpaque(false);
+        this.add(lblCreditosDisplay);
 
         btnJugar = new JButton();
         btnJugar.setVisible(true);
@@ -198,6 +233,12 @@ public class EspacioMenuPrincipal extends JPanel {
                 }
                 Dificultad seleccionada = VentanaDificultad.mostrarDialogo(EspacioMenuPrincipal.this);
                 if (seleccionada != null) {
+                    if (!consumirCreditoParaPartida()) {
+                        JOptionPane.showMessageDialog(EspacioMenuPrincipal.this, "No hay créditos. Cargue créditos para jugar.", "Sin créditos", JOptionPane.INFORMATION_MESSAGE);
+                        // Reponer el foco al panel para que las teclas vuelvan a funcionar
+                        SwingUtilities.invokeLater(() -> requestFocusInWindow());
+                        return;
+                    }
                     area.setDificultad(seleccionada);
                     area.iniciar();
                     ventanaJuego = new VentanaJuego(espacioJuego, EspacioMenuPrincipal.this);
@@ -222,14 +263,20 @@ public class EspacioMenuPrincipal extends JPanel {
                 else {
                     btnRanking.setIcon(imgBtnRankingClicked);
                 }
+                VentanaRanking.mostrarDialogo(EspacioMenuPrincipal.this);
+                SwingUtilities.invokeLater(() -> requestFocusInWindow());
             }
         });
 
+        // Simple KeyListener para SPACE / ESC
         this.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     System.out.println("Saliendo...");
                     System.exit(0);
+                } else if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    // Pulsar SPACE en el menú carga 1 crédito
+                    cargarCreditos(1);
                 }
             }
         });

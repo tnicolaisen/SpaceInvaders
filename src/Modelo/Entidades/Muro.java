@@ -24,12 +24,8 @@ public class Muro extends Entidad implements Daniable {
         return vida;
     }
 
-    // -----------------------
-    // Métodos
-    // -----------------------
-
     /**
-     * Reduce la vida del muro en 25 unidades.
+     * Reduce la vida del muro en 5 unidades (impacto enemigo).
      */
     @Override
     public void serDaniado() {
@@ -37,5 +33,15 @@ public class Muro extends Entidad implements Daniable {
         if (vida <= 0) {
             this.setInactivo(true);
         }
-    };
+    }
+
+    /**
+     * Reduce la vida del muro en 10 unidades (impacto de proyectil del jugador).
+     */
+    public void serDaniadoPorJugador() {
+        vida -= 10;
+        if (vida <= 0) {
+            this.setInactivo(true);
+        }
+    }
 }

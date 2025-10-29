@@ -6,28 +6,31 @@ import Modelo.Interfaces.Observador;
 import Utilidades.Dimension;
 import Utilidades.Direcciones;
 import Utilidades.Punto;
-import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Área en donde se ejecuta lógicamente el juego.
+ * Implementación sin locks exclusivos para 'entidades' (usa ConcurrentHashMap)
+ * para evitar deadlocks entre Timer-threads y el EDT.
  */
 public class Area {
 
-    // Entidades
-    private int contadorEntidades;
-    private Map<Integer, Entidad> entidades;
+    // Entidades (concurrente)
+    private AtomicInteger contadorEntidades = new AtomicInteger(0);
+    private final ConcurrentHashMap<Integer, Entidad> entidades = new ConcurrentHashMap<Integer, Entidad>();
     private Oleada oleada;
     private Direcciones direccionOleada;
 
     // Dimensiones de la ventana
     private Dimension dimension;
 
-    // Márgenes en los cuales la Oleada cambia de dirección, y el límite hasta donde la batería se puede mover.
+    // Márgenes
     private int margenIzquierda;
     private int margenDerecha;
     private int margenAbajo;
@@ -44,75 +47,67 @@ public class Area {
     Timer timerDisparoOleada;
     TimerTask taskDisparoOleada;
 
-    // Dificultad / intervalo de movimiento de la oleada (ms)
+    // Dificultad / intervalo
     private Dificultad dificultad = Dificultad.MASTER;
-    private long movimientoIntervalMillis = 13; // valor por defecto (comportamiento previo)
+    private long movimientoIntervalMillis = 13;
 
-    // Estado de iniciado (si los timers están corriendo)
-    private boolean iniciado = false;
-
-    // Lock para proteger accesos concurrentes a 'entidades' y a los timers relacionados
-    private final Object entidadesLock = new Object();
+    // Estado iniciado
+    private volatile boolean iniciado = false;
 
     private int cantidadNavesInicial = 0;
+
+    // Scoring / niveles / vidas
+    private int puntajeTotal = 0;
+    private int nivel = 1;
+    private int vidasJugador = 3;
+    private int siguienteVidaExtra = 500;
+    private final int puntosPorNave = 10;
+    private final int puntosPorCambioNivel = 200;
 
     /**
      * Registra el elemento pasado como observador.
      * @param observador Observador a registrar.
      */
-    private void registrarObservador(Observador observador) {this.observador = observador;}
+    private void registrarObservador(Observador observador) { this.observador = observador; }
 
     /**
      * Constructor.
      * @param observador Elemento que funcionará como observador. El objeto debe implementar la interfaz Observador.
      */
     public Area(Observador observador) {
-
-        // Propiedades del Area misma
         dimension = new Dimension(800, 900);
         margenIzquierda = 50;
         margenDerecha = 750;
         margenAbajo = 680;
         estadoPartida = EstadoPartida.EN_CURSO;
 
-        // Generación de las entidades
         registrarObservador(observador);
         generarEntidades();
     }
 
-    // -------------------------
-    // Nuevos métodos: Dificultad / inicio / detener / reiniciar
-    // -------------------------
+    // -------- Getters de estado del juego ----------
+    public int getPuntajeTotal() { return puntajeTotal; }
+    public int getVidasJugador() { return vidasJugador; }
+
     /**
-     * Ajusta la dificultad de la partida. Esto cambia la velocidad de movimiento
-     * de la oleada (se reprograma el timer de movimiento sólo si ya estaba creado).
+     * Ajusta la dificultad de la partida. Reprograma timer de movimiento si corresponde.
      * @param dificultad dificultad seleccionada
      */
     public void setDificultad(Dificultad dificultad) {
         if (dificultad == null) return;
         this.dificultad = dificultad;
         switch (dificultad) {
-            case CADETE:
-                movimientoIntervalMillis = 40; // más lento
-                break;
-            case GUERRERO:
-                movimientoIntervalMillis = 20; // medio
-                break;
-            case MASTER:
-            default:
-                movimientoIntervalMillis = 13; // rápido / por defecto anterior
-                break;
+            case CADETE -> movimientoIntervalMillis = 40;
+            case GUERRERO -> movimientoIntervalMillis = 20;
+            case MASTER -> movimientoIntervalMillis = 13;
         }
-        synchronized (entidadesLock) {
-            if (timerMovimientoOleada != null) {
-                reprogramarTimerMovimientoOleada();
-            }
+        if (timerMovimientoOleada != null) {
+            reprogramarTimerMovimientoOleada();
         }
     }
 
     /**
-     * Inicia (lanza) los timers de la partida. Llamar una vez cuando el jugador
-     * presione JUGAR tras elegir la dificultad.
+     * Inicia timers de la partida.
      */
     public void iniciar() {
         if (!iniciado) {
@@ -122,101 +117,76 @@ public class Area {
     }
 
     /**
-     * Detiene los timers de la partida. No cambia el estado de las entidades,
-     * solo detiene la ejecución lógica.
-     *
-     * Nota: se cancelan los Timers sin sincronizar con entidadesLock para evitar
-     * deadlocks cuando la llamada provenga del EDT mientras un Timer-thread esté
-     * dentro de un synchronized(entidadesLock).
+     * Detiene los timers de la partida.
      */
     public void detener() {
-        Timer te, tm, td;
-        // Guardar y limpiar referencias rápidamente bajo este lock (no usamos entidadesLock aquí)
-        synchronized (this) {
-            te = timerEjecucion;
-            tm = timerMovimientoOleada;
-            td = timerDisparoOleada;
-            timerEjecucion = null;
-            taskEjecucion = null;
-            timerMovimientoOleada = null;
-            taskMovimientoOleada = null;
-            timerDisparoOleada = null;
-            taskDisparoOleada = null;
-            iniciado = false;
-        }
+        Timer te = timerEjecucion;
+        Timer tm = timerMovimientoOleada;
+        Timer td = timerDisparoOleada;
+
+        timerEjecucion = null;
+        taskEjecucion = null;
+        timerMovimientoOleada = null;
+        taskMovimientoOleada = null;
+        timerDisparoOleada = null;
+        taskDisparoOleada = null;
+        iniciado = false;
+
         if (te != null) te.cancel();
         if (tm != null) tm.cancel();
         if (td != null) td.cancel();
     }
 
     /**
-     * Reinicia el Area a su estado inicial: detiene timers, regenera entidades y
-     * vuelve a estado EN_CURSO (no arranca timers automáticamente).
+     * Reinicia el Area (detiene, regenera y resetea estado).
      */
     public void reiniciar() {
         detener();
         generarEntidades();
         estadoPartida = EstadoPartida.EN_CURSO;
+        puntajeTotal = 0;
+        nivel = 1;
+        vidasJugador = 3;
+        siguienteVidaExtra = 500;
     }
 
-    /**
-     * Reprograma (cancela y crea) el timer de movimiento de la oleada para usar el intervalo actual.
-     */
     private void reprogramarTimerMovimientoOleada() {
         if (timerMovimientoOleada != null) {
-            try {
-                timerMovimientoOleada.cancel();
-            } catch (Exception ignored) {}
+            try { timerMovimientoOleada.cancel(); } catch (Exception ignored) {}
             timerMovimientoOleada = null;
             taskMovimientoOleada = null;
         }
         scheduleMovimientoOleada();
     }
 
-    // ------------------------------------
-    // Métodos públicos
-    // ------------------------------------
-
-    /**
-     * Permite mover al jugador (representado por la Batería) a la derecha.
-     */
+    // ---------- Acciones del jugador ----------
     public void moverJugadorDerecha(){
-        if (entidades.get(7).getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
-            entidades.get(7).moverseDerecha(20);
-
+        Entidad bateria = entidades.get(7);
+        if (bateria != null && bateria.getEsquinaSuperiorDerecha().getPosicionX() < margenDerecha){
+            bateria.moverseDerecha(20);
         }
     }
 
-    /**
-     * Permite mover al jugador (representado por la Batería) a la izquierda.
-     */
     public void moverJugadorIzquierda(){
-        if (entidades.get(7).getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
-            entidades.get(7).moverseIzquierda(20);
+        Entidad bateria = entidades.get(7);
+        if (bateria != null && bateria.getEsquinaInferiorIzquierda().getPosicionX() > margenIzquierda){
+            bateria.moverseIzquierda(20);
         }
     }
 
-    /**
-     * Permite mover hacer que la Batería que representa al jugador dispare un proyectil.
-     */
     public void dispararJugador(){
-        synchronized (entidadesLock) {
-            entidades.put(contadorEntidades, ((Bateria) entidades.get(7)).disparar());
-            contadorEntidades++;
+        Entidad bateria = entidades.get(7);
+        if (bateria instanceof Bateria) {
+            Proyectil p = ((Bateria) bateria).disparar();
+            int id = contadorEntidades.getAndIncrement();
+            entidades.put(id, p);
+            System.out.println("Area: dispararJugador -> proyectil id=" + id);
         }
     }
 
-    // ------------------------------------
-    // Métodos privados
-    // ------------------------------------
-
-    /**
-     * Genera las entidades en el Area de juego.
-     */
+    // ---------- Generación inicial ----------
     private void generarEntidades(){
-        Map<Integer, Entidad> nuevas = new HashMap<>();
-
-        // -------------------------- Muros
+        ConcurrentHashMap<Integer, Entidad> nuevas = new ConcurrentHashMap<>();
 
         nuevas.put(0, new Muro(new Punto(125, 700)));
         nuevas.put(1, new Muro(new Punto(225, 700)));
@@ -225,34 +195,25 @@ public class Area {
         nuevas.put(4, new Muro(new Punto(525, 700)));
         nuevas.put(5, new Muro(new Punto(625, 700)));
 
-        // -------------------------- Barra
         nuevas.put(6, new Barra(new Punto(50, 830)));
 
-        // -------------------------- Batería
         nuevas.put(7, new Bateria(new Punto(375, 808)));
-
-        // -------------------------- Oleada
 
         oleada = new Oleada(new Punto(235, 90));
         direccionOleada = Direcciones.DERECHA;
-        contadorEntidades = 8;
+        int startId = 8;
         for (Entidad nave : oleada.devolverNaves()){
-            nuevas.put(contadorEntidades, nave);
-            contadorEntidades++;
+            nuevas.put(startId++, nave);
         }
+        contadorEntidades.set(startId);
 
-        // Asigno el mapa de forma atómica bajo lock
-        synchronized (entidadesLock) {
-            entidades = nuevas;
-            cantidadNavesInicial = oleada.devolverNaves().size();
-        }
+        entidades.clear();
+        entidades.putAll(nuevas);
+        cantidadNavesInicial = oleada.devolverNaves().size();
     }
 
-    /**
-     * Ejecuta los timers.
-     */
+    // ---------- Timers y ejecución ----------
     private void ejecutarTimers(){
-        // Ejecución lógica del Area.
         timerEjecucion = new Timer();
         taskEjecucion = new TimerTask() {
             @Override
@@ -263,20 +224,20 @@ public class Area {
                     notificarVisual();
                     eliminarInactivos();
 
+                    // Si no quedan naves vivas -> PARTIDA GANADA
                     if (oleada.getCantidadDeNavesVivas() == 0){
                         estadoPartida = EstadoPartida.GANADA;
-                        int puntaje = (cantidadNavesInicial - oleada.getCantidadDeNavesVivas()) * 100;
-                        if (observador != null) observador.partidaFinalizada(estadoPartida, puntaje);
+                        // detener lógica antes de notificar
+                        detener();
+                        if (observador != null) observador.partidaFinalizada(estadoPartida, puntajeTotal);
                     }
                 }
             }
         };
         timerEjecucion.scheduleAtFixedRate(taskEjecucion, 0, 100);
 
-        // Movimiento de la oleada (usamos el método que programa el timer con el intervalo configurado)
         scheduleMovimientoOleada();
 
-        // Disparo de la oleada
         timerDisparoOleada = new Timer();
         taskDisparoOleada = new TimerTask() {
             @Override
@@ -289,9 +250,6 @@ public class Area {
         timerDisparoOleada.scheduleAtFixedRate(taskDisparoOleada, 0, 3000);
     }
 
-    /**
-     * Programa el timer de movimiento de la oleada según movimientoIntervalMillis.
-     */
     private void scheduleMovimientoOleada() {
         timerMovimientoOleada = new Timer();
         taskMovimientoOleada = new TimerTask() {
@@ -305,13 +263,11 @@ public class Area {
         timerMovimientoOleada.scheduleAtFixedRate(taskMovimientoOleada, 0, movimientoIntervalMillis);
     }
 
-    /**
-     * Ejecuta la lógica de movimiento de la Oleada (de naves).
-     */
     private void moverOleada(){
         int potenciador = 1;
-        if (oleada.getCantidadDeNavesVivas() <= 10 && oleada.getCantidadDeNavesVivas() > 5){potenciador = 2;}
-        else if (oleada.getCantidadDeNavesVivas() <= 5) {potenciador = 3;}
+        int vivas = oleada.getCantidadDeNavesVivas();
+        if (vivas <= 10 && vivas > 5) potenciador = 2;
+        else if (vivas <= 5) potenciador = 3;
 
         if (oleada.getEsquinaInferiorIzquierda().getPosicionY() < margenAbajo || oleada.getEsquinaInferiorDerecha().getPosicionX() < margenDerecha){
             if (oleada.getEsquinaSuperiorIzquierda().getPosicionX() < margenIzquierda && direccionOleada == Direcciones.IZQUIERDA){
@@ -329,38 +285,33 @@ public class Area {
             }
         } else {
             estadoPartida = EstadoPartida.PERDIDA;
-            int puntaje = (cantidadNavesInicial - oleada.getCantidadDeNavesVivas()) * 100;
-            if (observador != null) observador.partidaFinalizada(estadoPartida, puntaje);
+            if (observador != null) observador.partidaFinalizada(estadoPartida, puntajeTotal);
         }
         oleada.actualizarPosicionNaves();
     }
 
-    /**
-     * Llama por primera vez al observador, a la espera del jugador
-     */
-    private void notificarVisual(){
-        List<Map.Entry<Integer, Entidad>> snapshot;
-        synchronized (entidadesLock) {
-            snapshot = new ArrayList<>(entidades.entrySet());
-        }
-
-        // Notificación a la vista por medio del observador
-        for (Map.Entry<Integer, Entidad> entry : snapshot) {
-            Integer id = entry.getKey();
-            Entidad entidad = entry.getValue();
-            observador.actualizarPosiciones(id, entidad.getPunto(), entidad.getDimension(), entidad.getTipoEntidad(), entidad.getInactivo());
+    // ---------- Niveles / vidas ----------
+    private void revisarYOtorgarVidaExtra() {
+        while (puntajeTotal >= siguienteVidaExtra) {
+            vidasJugador++;
+            siguienteVidaExtra += 500;
         }
     }
 
-    /**
-     * Ejecuta el movimiento correspondiente de los proyectiles que estén en el área.
-     */
-    private void moverProyectiles(){
-        List<Entidad> snapshot;
-        synchronized (entidadesLock) {
-            snapshot = new ArrayList<>(entidades.values());
+    // ---------- Visualización ----------
+    private void notificarVisual(){
+        // snapshot sin bloquear
+        List<Map.Entry<Integer, Entidad>> snapshot = new ArrayList<>(entidades.entrySet());
+        for (Map.Entry<Integer, Entidad> entry : snapshot) {
+            Integer id = entry.getKey();
+            Entidad entidad = entry.getValue();
+            if (observador != null) observador.actualizarPosiciones(id, entidad.getPunto(), entidad.getDimension(), entidad.getTipoEntidad(), entidad.getInactivo());
         }
+    }
 
+    // ---------- Movimiento proyectiles ----------
+    private void moverProyectiles(){
+        List<Entidad> snapshot = new ArrayList<>(entidades.values());
         for (Entidad entidad : snapshot){
             if (entidad instanceof Proyectil){
                 Proyectil proyectil = (Proyectil) entidad;
@@ -372,15 +323,9 @@ public class Area {
         }
     }
 
-    /**
-     * Verifica si un proyectil colisionó con una Nave, un Muro o la Batería.
-     */
+    // ---------- Colisiones ----------
     private void verificarColisionProyectiles(){
-
-        List<Map.Entry<Integer, Entidad>> proyectilesSnapshot;
-        synchronized (entidadesLock) {
-            proyectilesSnapshot = new ArrayList<>(entidades.entrySet());
-        }
+        List<Map.Entry<Integer, Entidad>> proyectilesSnapshot = new ArrayList<>(entidades.entrySet());
 
         for (Map.Entry<Integer, Entidad> posibleProyectil : proyectilesSnapshot) {
             if (posibleProyectil.getValue() instanceof Proyectil) {
@@ -388,10 +333,7 @@ public class Area {
                 int idProyectil = posibleProyectil.getKey();
                 Proyectil proyectil = (Proyectil) posibleProyectil.getValue();
 
-                List<Map.Entry<Integer, Entidad>> objetivosSnapshot;
-                synchronized (entidadesLock) {
-                    objetivosSnapshot = new ArrayList<>(entidades.entrySet());
-                }
+                List<Map.Entry<Integer, Entidad>> objetivosSnapshot = new ArrayList<>(entidades.entrySet());
 
                 for (Map.Entry<Integer, Entidad> posibleObjetivo : objetivosSnapshot) {
                     Entidad posible = posibleObjetivo.getValue();
@@ -402,8 +344,17 @@ public class Area {
                         Entidad objetivo = posible;
 
                         if (proyectil.colisionoCon(objetivo)) {
-                            ((Daniable) proyectil).serDaniado();
-                            ((Daniable) objetivo).serDaniado();
+                            if (objetivo instanceof Muro) {
+                                if (proyectil.getDireccion() == Direcciones.ARRIBA) {
+                                    ((Muro) objetivo).serDaniadoPorJugador();
+                                } else {
+                                    ((Muro) objetivo).serDaniado();
+                                }
+                                proyectil.serDaniado();
+                            } else {
+                                proyectil.serDaniado();
+                                ((Daniable) objetivo).serDaniado();
+                            }
                             break;
                         }
                     }
@@ -412,32 +363,28 @@ public class Area {
         }
     }
 
-    /**
-     * Elimina todas las Entidades inactivas del diccionario de Entidades.
-     */
+    // ---------- Limpieza de inactivos ----------
     private void eliminarInactivos(){
         List<Integer> inactivos = new ArrayList<Integer>();
 
-        synchronized (entidadesLock) {
-            for (Map.Entry<Integer, Entidad> entry : new ArrayList<>(entidades.entrySet())){
-                if (entry.getValue().getInactivo()){
-                    inactivos.add(entry.getKey());
+        for (Map.Entry<Integer, Entidad> entry : new ArrayList<>(entidades.entrySet())){
+            if (entry.getValue().getInactivo()){
+                inactivos.add(entry.getKey());
+                if (entry.getValue().getTipoEntidad() == Utilidades.TiposEntidades.NAVE) {
+                    puntajeTotal += puntosPorNave;
+                    revisarYOtorgarVidaExtra();
                 }
             }
+        }
 
-            for (Integer inactivo : inactivos){
-                entidades.remove(inactivo);
-            }
+        for (Integer inactivo : inactivos){
+            entidades.remove(inactivo);
         }
     }
 
-    /**
-     * Hace que una de las naves de la tercer fila dispare, en caso de existir.
-     */
     private void dispararNave(){
-        synchronized (entidadesLock) {
-            entidades.put(contadorEntidades,oleada.dispararNaveAleatoria());
-            contadorEntidades++;
-        }
+        Proyectil p = oleada.dispararNaveAleatoria();
+        int id = contadorEntidades.getAndIncrement();
+        entidades.put(id, p);
     }
 }

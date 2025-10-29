@@ -23,6 +23,12 @@ public class Proyectil extends Entidad implements Daniable {
     }
 
     /**
+     * Devuelve la direccion del proyectil (ARRIBA o ABAJO).
+     * @return Direcciones del proyectil.
+     */
+    public Direcciones getDireccion() { return direccion; }
+
+    /**
      * Calcula automáticamente la trayectoria del proyectil al siguiente ciclo.
      */
     public void continuarTrayectoria(){
@@ -33,7 +39,7 @@ public class Proyectil extends Entidad implements Daniable {
         } else {
             throw new IllegalStateException("El proyectil sólo debe moverse hacia ARRIBA o ABAJO.");
         }
-    };
+    }
 
     /**
      * Mata al proyectil.
