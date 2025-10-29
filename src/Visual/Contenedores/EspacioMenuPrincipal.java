@@ -12,6 +12,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+/**
+ * Panel del menú principal que contiene la referencia a la ventana del juego.
+ */
 public class EspacioMenuPrincipal extends JPanel {
     private EspacioJuego espacioJuego;
     private Area area;
@@ -36,6 +39,10 @@ public class EspacioMenuPrincipal extends JPanel {
     ImageIcon imgBtnRankingHover;
     ImageIcon imgBtnRankingClicked;
 
+    /**
+     * Constructor.
+     * @param controlador controlador principal
+     */
     public EspacioMenuPrincipal(Controlador controlador) {
         this.controlador = controlador;
         configurarEspacio();
@@ -50,15 +57,41 @@ public class EspacioMenuPrincipal extends JPanel {
         return area;
     }
 
+    /**
+     * Reinicia el Area a su estado inicial (se usa cuando se cierra la ventana del juego).
+     * Ahora: limpiamos la vista primero (EDT) y ejecutamos la reinicialización del modelo en un hilo de fondo
+     * para evitar bloquear el EDT si algún Timer-thread aún tiene locks en curso.
+     */
     public void reiniciarArea() {
-        if (area != null) {
-            area.reiniciar();
-        }
         if (espacioJuego != null) {
             espacioJuego.limpiarSprites();
         }
+        if (area != null) {
+            new Thread(() -> area.reiniciar()).start();
+        }
     }
 
+    /**
+     * Cierra (dispose) la ventana del juego si está abierta.
+     */
+    public void cerrarVentanaJuego() {
+        if (ventanaJuego != null) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                ventanaJuego.dispose();
+                ventanaJuego = null;
+            } else {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        ventanaJuego.dispose();
+                        ventanaJuego = null;
+                    }
+                });
+            }
+        }
+    }
+
+    // El resto del archivo (cargarElementos, cargarImagenesBotones, configurarEspacio, configurarListeners, etc.)
+    // permanece igual que antes; no se modificaron.
     private void cargarElementos(){
         lblLogo = new JLabel();
         lblLogo.setVisible(true);

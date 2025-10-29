@@ -54,6 +54,8 @@ public class Area {
     // Lock para proteger accesos concurrentes a 'entidades' y a los timers relacionados
     private final Object entidadesLock = new Object();
 
+    private int cantidadNavesInicial = 0;
+
     /**
      * Registra el elemento pasado como observador.
      * @param observador Observador a registrar.
@@ -78,9 +80,9 @@ public class Area {
         generarEntidades();
     }
 
-    // ---------------------------------------------------------
+    // -------------------------
     // Nuevos métodos: Dificultad / inicio / detener / reiniciar
-    // ---------------------------------------------------------
+    // -------------------------
     /**
      * Ajusta la dificultad de la partida. Esto cambia la velocidad de movimiento
      * de la oleada (se reprograma el timer de movimiento sólo si ya estaba creado).
@@ -101,7 +103,6 @@ public class Area {
                 movimientoIntervalMillis = 13; // rápido / por defecto anterior
                 break;
         }
-        // Si el timer de movimiento ya existe, reprogramarlo con el nuevo intervalo.
         synchronized (entidadesLock) {
             if (timerMovimientoOleada != null) {
                 reprogramarTimerMovimientoOleada();
@@ -123,26 +124,29 @@ public class Area {
     /**
      * Detiene los timers de la partida. No cambia el estado de las entidades,
      * solo detiene la ejecución lógica.
+     *
+     * Nota: se cancelan los Timers sin sincronizar con entidadesLock para evitar
+     * deadlocks cuando la llamada provenga del EDT mientras un Timer-thread esté
+     * dentro de un synchronized(entidadesLock).
      */
     public void detener() {
-        synchronized (entidadesLock) {
-                if (timerEjecucion != null) {
-                    timerEjecucion.cancel();
-                    timerEjecucion = null;
-                    taskEjecucion = null;
-                }
-                if (timerMovimientoOleada != null) {
-                    timerMovimientoOleada.cancel();
-                    timerMovimientoOleada = null;
-                    taskMovimientoOleada = null;
-                }
-                if (timerDisparoOleada != null) {
-                    timerDisparoOleada.cancel();
-                    timerDisparoOleada = null;
-                    taskDisparoOleada = null;
-                }
+        Timer te, tm, td;
+        // Guardar y limpiar referencias rápidamente bajo este lock (no usamos entidadesLock aquí)
+        synchronized (this) {
+            te = timerEjecucion;
+            tm = timerMovimientoOleada;
+            td = timerDisparoOleada;
+            timerEjecucion = null;
+            taskEjecucion = null;
+            timerMovimientoOleada = null;
+            taskMovimientoOleada = null;
+            timerDisparoOleada = null;
+            taskDisparoOleada = null;
             iniciado = false;
         }
+        if (te != null) te.cancel();
+        if (tm != null) tm.cancel();
+        if (td != null) td.cancel();
     }
 
     /**
@@ -150,20 +154,15 @@ public class Area {
      * vuelve a estado EN_CURSO (no arranca timers automáticamente).
      */
     public void reiniciar() {
-        // Detener timers si estaban corriendo
         detener();
-
-        // Regenerar entidades y estado inicial
         generarEntidades();
         estadoPartida = EstadoPartida.EN_CURSO;
-        // NOTA: no arrancamos timers aquí; iniciar() debe llamarse desde quien inicie la partida.
     }
 
     /**
      * Reprograma (cancela y crea) el timer de movimiento de la oleada para usar el intervalo actual.
      */
     private void reprogramarTimerMovimientoOleada() {
-        // Cancelar timer previo si existe
         if (timerMovimientoOleada != null) {
             try {
                 timerMovimientoOleada.cancel();
@@ -171,7 +170,6 @@ public class Area {
             timerMovimientoOleada = null;
             taskMovimientoOleada = null;
         }
-        // Crear uno nuevo
         scheduleMovimientoOleada();
     }
 
@@ -219,6 +217,7 @@ public class Area {
         Map<Integer, Entidad> nuevas = new HashMap<>();
 
         // -------------------------- Muros
+
         nuevas.put(0, new Muro(new Punto(125, 700)));
         nuevas.put(1, new Muro(new Punto(225, 700)));
         nuevas.put(2, new Muro(new Punto(325, 700)));
@@ -233,6 +232,7 @@ public class Area {
         nuevas.put(7, new Bateria(new Punto(375, 808)));
 
         // -------------------------- Oleada
+
         oleada = new Oleada(new Punto(235, 90));
         direccionOleada = Direcciones.DERECHA;
         contadorEntidades = 8;
@@ -244,6 +244,7 @@ public class Area {
         // Asigno el mapa de forma atómica bajo lock
         synchronized (entidadesLock) {
             entidades = nuevas;
+            cantidadNavesInicial = oleada.devolverNaves().size();
         }
     }
 
@@ -264,7 +265,8 @@ public class Area {
 
                     if (oleada.getCantidadDeNavesVivas() == 0){
                         estadoPartida = EstadoPartida.GANADA;
-                        System.out.println("Victoria: ¡Partida ganada!");
+                        int puntaje = (cantidadNavesInicial - oleada.getCantidadDeNavesVivas()) * 100;
+                        if (observador != null) observador.partidaFinalizada(estadoPartida, puntaje);
                     }
                 }
             }
@@ -307,14 +309,11 @@ public class Area {
      * Ejecuta la lógica de movimiento de la Oleada (de naves).
      */
     private void moverOleada(){
-        // Utilizo el potenciador para poder incrementar la velocidad de movimiento de la Oleada cuando queden 10 y 5 naves.
         int potenciador = 1;
         if (oleada.getCantidadDeNavesVivas() <= 10 && oleada.getCantidadDeNavesVivas() > 5){potenciador = 2;}
         else if (oleada.getCantidadDeNavesVivas() <= 5) {potenciador = 3;}
 
-        // ------------------------ Movimiento de la oleada
         if (oleada.getEsquinaInferiorIzquierda().getPosicionY() < margenAbajo || oleada.getEsquinaInferiorDerecha().getPosicionX() < margenDerecha){
-            // -------- Cuando llega a los bordes
             if (oleada.getEsquinaSuperiorIzquierda().getPosicionX() < margenIzquierda && direccionOleada == Direcciones.IZQUIERDA){
                 direccionOleada = Direcciones.DERECHA;
                 oleada.moverseAbajo(50);
@@ -322,7 +321,6 @@ public class Area {
                 direccionOleada = Direcciones.IZQUIERDA;
                 oleada.moverseAbajo(50);
             } else {
-                // -------- Movimiento horizontal
                 if (direccionOleada == Direcciones.IZQUIERDA){
                     oleada.moverseIzquierda(potenciador);
                 } else if (direccionOleada == Direcciones.DERECHA){
@@ -330,8 +328,9 @@ public class Area {
                 }
             }
         } else {
-            System.out.println("¡Fallaste!: Partida perdida");
             estadoPartida = EstadoPartida.PERDIDA;
+            int puntaje = (cantidadNavesInicial - oleada.getCantidadDeNavesVivas()) * 100;
+            if (observador != null) observador.partidaFinalizada(estadoPartida, puntaje);
         }
         oleada.actualizarPosicionNaves();
     }
@@ -340,14 +339,12 @@ public class Area {
      * Llama por primera vez al observador, a la espera del jugador
      */
     private void notificarVisual(){
-
-        // Tomo snapshot atómico de las entradas bajo lock para evitar concurrencia
         List<Map.Entry<Integer, Entidad>> snapshot;
         synchronized (entidadesLock) {
             snapshot = new ArrayList<>(entidades.entrySet());
         }
 
-        // Notificación a la vista por medio del observador (iteramos sobre snapshot)
+        // Notificación a la vista por medio del observador
         for (Map.Entry<Integer, Entidad> entry : snapshot) {
             Integer id = entry.getKey();
             Entidad entidad = entry.getValue();
@@ -359,15 +356,13 @@ public class Area {
      * Ejecuta el movimiento correspondiente de los proyectiles que estén en el área.
      */
     private void moverProyectiles(){
-        // Tomo snapshot atómico de las entidades bajo lock
         List<Entidad> snapshot;
         synchronized (entidadesLock) {
             snapshot = new ArrayList<>(entidades.values());
         }
 
-        // Movimiento de los proyectiles (trabajamos con snapshot para evitar ConcurrentModification)
         for (Entidad entidad : snapshot){
-            if (entidad instanceof Proyectil){ // Similar al casteo. Aquí simplemente especifico la entidad.
+            if (entidad instanceof Proyectil){
                 Proyectil proyectil = (Proyectil) entidad;
                 proyectil.continuarTrayectoria();
                 if (proyectil.getPunto().getPosicionY() < 0 || proyectil.getPunto().getPosicionY() > this.dimension.getAlto()){
@@ -382,21 +377,17 @@ public class Area {
      */
     private void verificarColisionProyectiles(){
 
-        // Tomo snapshot atómico de las entradas bajo lock
         List<Map.Entry<Integer, Entidad>> proyectilesSnapshot;
         synchronized (entidadesLock) {
             proyectilesSnapshot = new ArrayList<>(entidades.entrySet());
         }
 
-        // La recorro en busca de proyectiles (trabajo sobre snapshot para evitar ConcurrentModification)
         for (Map.Entry<Integer, Entidad> posibleProyectil : proyectilesSnapshot) {
             if (posibleProyectil.getValue() instanceof Proyectil) {
 
-                // Datos del proyectil
                 int idProyectil = posibleProyectil.getKey();
                 Proyectil proyectil = (Proyectil) posibleProyectil.getValue();
 
-                // Para comprobar objetivos, tomo otro snapshot local y atómico
                 List<Map.Entry<Integer, Entidad>> objetivosSnapshot;
                 synchronized (entidadesLock) {
                     objetivosSnapshot = new ArrayList<>(entidades.entrySet());
@@ -427,7 +418,6 @@ public class Area {
     private void eliminarInactivos(){
         List<Integer> inactivos = new ArrayList<Integer>();
 
-        // Tomo snapshot y genero la lista de inactivos bajo lock
         synchronized (entidadesLock) {
             for (Map.Entry<Integer, Entidad> entry : new ArrayList<>(entidades.entrySet())){
                 if (entry.getValue().getInactivo()){
@@ -435,7 +425,6 @@ public class Area {
                 }
             }
 
-            // Remuevo los inactivos del Map dentro del lock
             for (Integer inactivo : inactivos){
                 entidades.remove(inactivo);
             }
