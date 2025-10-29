@@ -1,20 +1,17 @@
 package Controlador;
 import Modelo.Area;
-import Visual.Contenedores.EspacioJuego;
-import Visual.Ventanas.VentanaJuego;
+import Visual.Contenedores.EspacioMenuPrincipal;
+import Visual.Ventanas.VentanaMenuPrincipal;
 
 public class Controlador {
-    private EspacioJuego espacioJuego;
-    private VentanaJuego ventana;
+    private EspacioMenuPrincipal espacioMenuPrincipal;
+    private VentanaMenuPrincipal ventanaMenuPrincipal;
     private Area area;
 
-    /**
-     * Constructor. Genera un controlador de Space Invaders.
-     */
-    public Controlador(){
-        espacioJuego = new EspacioJuego(this);
-        area = new Area(espacioJuego, 1);
-        ventana = new VentanaJuego(espacioJuego);
+    public Controlador() {
+        espacioMenuPrincipal = new EspacioMenuPrincipal(this);
+        area = espacioMenuPrincipal.getArea();
+        ventanaMenuPrincipal = new VentanaMenuPrincipal(espacioMenuPrincipal);
     }
 
     /**

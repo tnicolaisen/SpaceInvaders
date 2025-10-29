@@ -1,5 +1,7 @@
 package Visual.Ventanas;
 import javax.swing.*;
+
+import Controlador.Controlador;
 import Utilidades.Punto;
 import Utilidades.Dimension;
 import Visual.Contenedores.EspacioMenuPrincipal;
@@ -11,11 +13,12 @@ public class VentanaMenuPrincipal extends JFrame {
     private Dimension dimension;
     JPanel espacio;
 
-    public VentanaMenuPrincipal() {
+    public VentanaMenuPrincipal(EspacioMenuPrincipal espacio) {
+
         configurarVentana();
 
         // crear y añadir el panel antes de mostrar la ventana
-        espacio = new EspacioMenuPrincipal();
+        this.espacio = espacio;
         this.setContentPane(espacio);
 
         // forzar validación y repintado antes de mostrar

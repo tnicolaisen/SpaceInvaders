@@ -16,8 +16,6 @@ import java.util.ArrayList;
  * Área en donde se ejecuta lógicamente el juego.
  */
 public class Area {
-    // Dificultad
-    private int dificultad;
 
     // Entidades
     private int contadorEntidades;
@@ -56,7 +54,7 @@ public class Area {
      * @param observador Elemento que funcionará como observador. El objeto debe implementar la interfaz Observador.
      * @param dificultad Dificultad en la que se juega.
      */
-    public Area(Observador observador, int dificultad) {
+    public Area(Observador observador) {
 
         // Propiedades del Area misma
         dimension = new Dimension(800, 900);
@@ -64,7 +62,6 @@ public class Area {
         margenDerecha = 750;
         margenAbajo = 680;
         estadoPartida = EstadoPartida.EN_CURSO;
-        this.dificultad = dificultad;
 
         // Generación de las entidades
         registrarObservador(observador);
@@ -211,9 +208,9 @@ public class Area {
             } else {
                 // -------- Movimiento horizontal
                 if (direccionOleada == Direcciones.IZQUIERDA){
-                    oleada.moverseIzquierda(potenciador * dificultad);
+                    oleada.moverseIzquierda(potenciador);
                 } else if (direccionOleada == Direcciones.DERECHA){
-                    oleada.moverseDerecha(potenciador * dificultad);
+                    oleada.moverseDerecha(potenciador);
                 }
             }
         } else {

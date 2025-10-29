@@ -5,8 +5,9 @@ import Utilidades.Dimension;
 import Utilidades.Punto;
 import Utilidades.TiposEntidades;
 import Visual.Sprites.*;
-import javax.swing.JPanel;
-import java.awt.Color;
+
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
@@ -62,6 +63,17 @@ public class EspacioJuego extends JPanel implements Observador {
                 }
                 if (e.getKeyCode() == KeyEvent.VK_SPACE) {
                     controlador.disparar();
+                }
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    Window window = SwingUtilities.getWindowAncestor(EspacioJuego.this);
+                    if (window != null) {
+                        // Si querés detener la lógica del juego (timers) antes de cerrar,
+                        // añade un método en el controlador, por ejemplo controlador.detenerJuego();
+                        // y descomenta la siguiente línea:
+                        // if (controlador != null) controlador.detenerJuego();
+
+                        window.dispose();
+                    }
                 }
             }
         });

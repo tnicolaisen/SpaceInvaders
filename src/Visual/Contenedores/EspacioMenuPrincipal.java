@@ -1,4 +1,8 @@
 package Visual.Contenedores;
+import Controlador.Controlador;
+import Modelo.Area;
+import Visual.Ventanas.VentanaJuego;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
@@ -10,6 +14,11 @@ public class EspacioMenuPrincipal extends JPanel {
     // --------------------------
     // Estado
     // --------------------------
+
+    private EspacioJuego espacioJuego;
+    private Area area;
+    private VentanaJuego ventanaJuego;
+    private Controlador controlador;
 
     // -------------------------- Labels
     private JLabel lblNave;
@@ -39,13 +48,25 @@ public class EspacioMenuPrincipal extends JPanel {
     /**
      * Constructor. Genera un espacio donde se renderizan los elementos del menú principal.
      */
-    public EspacioMenuPrincipal() {
+    public EspacioMenuPrincipal(Controlador controlador) {
+        this.controlador = controlador;
         configurarEspacio();
         cargarElementos();
         cargarImagenesBotones();
+        espacioJuego = new EspacioJuego(controlador);
+        area = new Area(espacioJuego);
         configurarListeners();
 
     }
+
+    // --------------------------
+    // Métodos publicos
+    // --------------------------
+
+    public Area getArea() {
+        return area;
+    }
+
 
     // --------------------------
     // Métodos privados
@@ -127,6 +148,7 @@ public class EspacioMenuPrincipal extends JPanel {
         java.net.URL jugarImgUrl = getClass().getResource("/Imagenes/MenuPrincipal/botonJugarIdle.png");
         btnJugar.setIcon(new ImageIcon(jugarImgUrl));
         btnJugar.setBackground(Color.black);
+        btnJugar.setBorderPainted(false);
         this.add(btnJugar);
 
         // ----------------------------- Ranking
@@ -136,6 +158,7 @@ public class EspacioMenuPrincipal extends JPanel {
         java.net.URL rankingImgUrl = getClass().getResource("/Imagenes/MenuPrincipal/botonRankingIdle.png");
         btnRanking.setIcon(new ImageIcon(rankingImgUrl));
         btnRanking.setBackground(Color.black);
+        btnRanking.setBorderPainted(false);
         this.add(btnRanking);
     }
 
@@ -178,7 +201,7 @@ public class EspacioMenuPrincipal extends JPanel {
                 btnJugar.setIcon(imgBtnJugarIdle); // normal
             }
             @Override public void mousePressed(MouseEvent e) {
-                btnJugar.setIcon(imgBtnJugarClicked);// active / click
+                btnJugar.setIcon(imgBtnJugarClicked); // click
             }
             @Override public void mouseReleased(MouseEvent e) {
                 // restaurar al estado hover o normal según el cursor esté dentro
@@ -188,24 +211,25 @@ public class EspacioMenuPrincipal extends JPanel {
                 else {
                     btnJugar.setIcon(imgBtnJugarClicked);
                 }
+                ventanaJuego = new VentanaJuego(espacioJuego);
             }
         });
 
         // -------------------------- Boton Ranking
         btnRanking.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) {
-                btnRanking.setIcon(imgBtnRankingHover);      // Similar al hoverhover
+                btnRanking.setIcon(imgBtnRankingClicked);      // Similar al hoverhover
             }
             @Override public void mouseExited(MouseEvent e) {
                 btnRanking.setIcon(imgBtnRankingIdle); // normal
             }
             @Override public void mousePressed(MouseEvent e) {
-                btnRanking.setIcon(imgBtnRankingClicked);// active / click
+                btnRanking.setIcon(imgBtnRankingHover);// active / click
             }
             @Override public void mouseReleased(MouseEvent e) {
                 // restaurar al estado hover o normal según el cursor esté dentro
                 if (btnRanking.contains(e.getPoint())){
-                    btnRanking.setIcon(imgBtnRankingHover);
+                    btnRanking.setIcon(imgBtnRankingClicked);
                 }
                 else {
                     btnRanking.setIcon(imgBtnRankingClicked);
