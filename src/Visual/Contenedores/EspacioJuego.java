@@ -13,10 +13,20 @@ import java.awt.event.KeyEvent;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
+/**
+ * Panel donde se renderiza la vista del juego. Implementa Observador para recibir
+ * actualizaciones del modelo. Las actualizaciones se encolan y se procesan en lote
+ * en el Event Dispatch Thread para evitar saturar la cola del EDT.
+ */
 public class EspacioJuego extends JPanel implements Observador {
     Controlador controlador;
     Map<Integer, Sprite> sprites;
+
+    private final List<Actualizacion> colaActualizaciones;
+    private boolean procesando;
 
     /**
      * Constructor. Crea un espacio en donde se renderizará Space Invaders.
@@ -24,18 +34,14 @@ public class EspacioJuego extends JPanel implements Observador {
      */
     public EspacioJuego(Controlador controlador) {
         this.controlador = controlador;
-
-        // Nota
-        // permite que el panel reciba foco de teclado
         this.setFocusable(true);
-
+        this.colaActualizaciones = new ArrayList<Actualizacion>();
+        this.procesando = false;
         configurarListener();
-
         this.sprites = new HashMap<Integer, Sprite>();
         configurarEspacioJuego();
     }
 
-    // Pide el foco cuando el panel se hace visible. Sin esto no podía hacer andar el input del teclado.
     @Override
     public void addNotify() {
         super.addNotify();
@@ -68,23 +74,14 @@ public class EspacioJuego extends JPanel implements Observador {
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     Window window = SwingUtilities.getWindowAncestor(EspacioJuego.this);
                     if (window != null) {
-                        // Intentar detener la lógica del juego si el controlador define detenerJuego()
-                        // Usamos reflexión para no requerir obligatoriamente el método en tiempo de compilación.
                         if (controlador != null) {
                             try {
                                 Method detener = controlador.getClass().getMethod("detenerJuego");
                                 if (detener != null) {
                                     detener.invoke(controlador);
                                 }
-                            } catch (NoSuchMethodException ignored) {
-                                // El controlador no implementa detenerJuego(): no hacemos nada
-                            } catch (Exception ex) {
-                                // Cualquier otro error al invocar, lo ignoramos para evitar que la UI se rompa.
-                                ex.printStackTrace();
-                            }
+                            } catch (Exception ignored) {}
                         }
-
-                        // Cierro la ventana del juego
                         window.dispose();
                     }
                 }
@@ -93,7 +90,42 @@ public class EspacioJuego extends JPanel implements Observador {
     }
 
     /**
-     * Actualiza la posición del objeto pasado según los paráemtros.
+     * Limpia todos los sprites de la vista. Se encola la acción y se procesa en el EDT.
+     */
+    public void limpiarSprites() {
+        Actualizacion actualizacion = new Actualizacion();
+        actualizacion.accion = Accion.LIMPIAR;
+        synchronized (colaActualizaciones) {
+            colaActualizaciones.add(actualizacion);
+            if (!procesando) {
+                procesando = true;
+                SwingUtilities.invokeLater(this::procesarCola);
+            }
+        }
+    }
+
+    /**
+     * Indica a la vista que elimine el sprite asociado al id (por ejemplo cuando la entidad
+     * fue removida del modelo). Esta llamada encola la eliminación y la procesa en el EDT.
+     * @param id ID de la entidad eliminada.
+     */
+    @Override
+    public void eliminarEntidad(int id) {
+        Actualizacion actualizacion = new Actualizacion();
+        actualizacion.accion = Accion.ELIMINAR;
+        actualizacion.id = id;
+        synchronized (colaActualizaciones) {
+            colaActualizaciones.add(actualizacion);
+            if (!procesando) {
+                procesando = true;
+                SwingUtilities.invokeLater(this::procesarCola);
+            }
+        }
+    }
+
+    /**
+     * Recibe la actualización de posición/dimensión/tipo/inactivo del modelo.
+     * Encola la actualización para su procesamiento en lote en el EDT.
      * @param id ID del objeto a cambiar.
      * @param punto Posición en el espacio del objeto a cambiar.
      * @param dimension Ancho y alto del objeto a cambiar.
@@ -102,30 +134,92 @@ public class EspacioJuego extends JPanel implements Observador {
      */
     @Override
     public void actualizarPosiciones(int id, Punto punto, Dimension dimension, TiposEntidades tipo, boolean inactivo) {
-        if (sprites.containsKey(id)) {
-            sprites.get(id).setBounds(punto.getPosicionX(), punto.getPosicionY(), dimension.getAncho(), dimension.getAlto());
-            if (inactivo) {
-                sprites.get(id).setVisible(false);
-            } else {
-                sprites.get(id).setVisible(true);
-            }
-            sprites.get(id).repaint();
-        } else {
-            Sprite nuevoSprite = null;
-            switch (tipo) {
-                case NAVE -> nuevoSprite = new SpriteNave(punto);
-                case PROYECTIL -> nuevoSprite = new SpriteProyectil(punto);
-                case MURO -> nuevoSprite = new SpriteMuro(punto);
-                case BATERIA -> nuevoSprite = new SpriteBateria(punto);
-                case BARRA -> nuevoSprite = new SpriteBarra(punto);
-            }
-            if (nuevoSprite != null) {
-                nuevoSprite.setBounds(punto.getPosicionX(), punto.getPosicionY(), dimension.getAncho(), dimension.getAlto());
-                sprites.put(id, nuevoSprite);
-                this.add(nuevoSprite);
-                this.revalidate();
-                this.repaint();
+        Actualizacion actualizacion = new Actualizacion();
+        actualizacion.accion = Accion.ACTUALIZAR;
+        actualizacion.id = id;
+        actualizacion.punto = punto;
+        actualizacion.dimension = dimension;
+        actualizacion.tipo = tipo;
+        actualizacion.inactivo = inactivo;
+        synchronized (colaActualizaciones) {
+            colaActualizaciones.add(actualizacion);
+            if (!procesando) {
+                procesando = true;
+                SwingUtilities.invokeLater(this::procesarCola);
             }
         }
     }
+
+    /**
+     * Procesa la cola de actualizaciones en el EDT aplicando los cambios visuales
+     * (ADD/UPDATE/REMOVE/CLEAR) sobre los sprites del panel.
+     */
+    private void procesarCola() {
+        while (true) {
+            Actualizacion actualizacion;
+            synchronized (colaActualizaciones) {
+                if (colaActualizaciones.isEmpty()) {
+                    procesando = false;
+                    break;
+                }
+                actualizacion = colaActualizaciones.remove(0);
+            }
+
+            if (actualizacion.accion == Accion.LIMPIAR) {
+                for (Sprite sprite : new java.util.ArrayList<>(sprites.values())) {
+                    this.remove(sprite);
+                }
+                sprites.clear();
+                this.revalidate();
+                this.repaint();
+                continue;
+            }
+
+            if (actualizacion.accion == Accion.ELIMINAR) {
+                Sprite sprite = sprites.remove(actualizacion.id);
+                if (sprite != null) {
+                    this.remove(sprite);
+                    this.revalidate();
+                    this.repaint();
+                }
+                continue;
+            }
+
+            if (actualizacion.accion == Accion.ACTUALIZAR) {
+                if (sprites.containsKey(actualizacion.id)) {
+                    Sprite sprite = sprites.get(actualizacion.id);
+                    sprite.setBounds(actualizacion.punto.getPosicionX(), actualizacion.punto.getPosicionY(), actualizacion.dimension.getAncho(), actualizacion.dimension.getAlto());
+                    if (actualizacion.inactivo) sprite.setVisible(false); else sprite.setVisible(true);
+                    sprite.repaint();
+                } else {
+                    Sprite nuevoSprite = null;
+                    switch (actualizacion.tipo) {
+                        case NAVE -> nuevoSprite = new SpriteNave(actualizacion.punto);
+                        case PROYECTIL -> nuevoSprite = new SpriteProyectil(actualizacion.punto);
+                        case MURO -> nuevoSprite = new SpriteMuro(actualizacion.punto);
+                        case BATERIA -> nuevoSprite = new SpriteBateria(actualizacion.punto);
+                        case BARRA -> nuevoSprite = new SpriteBarra(actualizacion.punto);
+                    }
+                    if (nuevoSprite != null) {
+                        nuevoSprite.setBounds(actualizacion.punto.getPosicionX(), actualizacion.punto.getPosicionY(), actualizacion.dimension.getAncho(), actualizacion.dimension.getAlto());
+                        sprites.put(actualizacion.id, nuevoSprite);
+                        this.add(nuevoSprite);
+                        this.revalidate();
+                        this.repaint();
+                    }
+                }
+            }
+        }
+    }
+
+    private static class Actualizacion {
+        Accion accion;
+        int id;
+        Punto punto;
+        Dimension dimension;
+        TiposEntidades tipo;
+        boolean inactivo;
+    }
+
+    private enum Accion { ACTUALIZAR, ELIMINAR, LIMPIAR }
 }

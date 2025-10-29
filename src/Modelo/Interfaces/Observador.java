@@ -13,4 +13,11 @@ public interface Observador {
      * @param inactivo Si el objeto está inactivo o no.
      */
     public void actualizarPosiciones(int id, Punto punto, Dimension dimension, TiposEntidades tipo, boolean inactivo);
+
+    /**
+     * Indica a la vista que elimine el sprite asociado al id (por ejemplo cuando la entidad
+     * fue removida del modelo). Esta llamada debe ejecutarse en el EDT.
+     * @param id ID de la entidad eliminada.
+     */
+    public void eliminarEntidad(int id);
 }
