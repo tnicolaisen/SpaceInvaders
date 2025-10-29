@@ -71,6 +71,15 @@ public class EspacioMenuPrincipal extends JPanel {
         return area;
     }
 
+    /**
+     * Reinicia el Area a su estado inicial (se usa cuando se cierra la ventana del juego).
+     */
+    public void reiniciarArea() {
+        if (area != null) {
+            area.reiniciar();
+        }
+    }
+
 
     // --------------------------
     // Métodos privados
@@ -215,15 +224,11 @@ public class EspacioMenuPrincipal extends JPanel {
                 else {
                     btnJugar.setIcon(imgBtnJugarClicked);
                 }
-                // Muestro los dialogos
                 Dificultad seleccionada = VentanaDificultad.mostrarDialogo(EspacioMenuPrincipal.this);
                 if (seleccionada != null) {
-                    // Aplico dificultad
                     area.setDificultad(seleccionada);
-                    // Inicio la lógica de la partida (arranca timers)
                     area.iniciar();
-                    // Abre la ventana del juego
-                    ventanaJuego = new VentanaJuego(espacioJuego);
+                    ventanaJuego = new VentanaJuego(espacioJuego, EspacioMenuPrincipal.this);
                 }
             }
         });

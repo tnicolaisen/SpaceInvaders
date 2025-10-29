@@ -10,6 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -67,11 +68,23 @@ public class EspacioJuego extends JPanel implements Observador {
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     Window window = SwingUtilities.getWindowAncestor(EspacioJuego.this);
                     if (window != null) {
-                        // Si querés detener la lógica del juego (timers) antes de cerrar,
-                        // añade un método en el controlador, por ejemplo controlador.detenerJuego();
-                        // y descomenta la siguiente línea:
-                        // if (controlador != null) controlador.detenerJuego();
+                        // Intentar detener la lógica del juego si el controlador define detenerJuego()
+                        // Usamos reflexión para no requerir obligatoriamente el método en tiempo de compilación.
+                        if (controlador != null) {
+                            try {
+                                Method detener = controlador.getClass().getMethod("detenerJuego");
+                                if (detener != null) {
+                                    detener.invoke(controlador);
+                                }
+                            } catch (NoSuchMethodException ignored) {
+                                // El controlador no implementa detenerJuego(): no hacemos nada
+                            } catch (Exception ex) {
+                                // Cualquier otro error al invocar, lo ignoramos para evitar que la UI se rompa.
+                                ex.printStackTrace();
+                            }
+                        }
 
+                        // Cierro la ventana del juego
                         window.dispose();
                     }
                 }
@@ -93,6 +106,8 @@ public class EspacioJuego extends JPanel implements Observador {
             sprites.get(id).setBounds(punto.getPosicionX(), punto.getPosicionY(), dimension.getAncho(), dimension.getAlto());
             if (inactivo) {
                 sprites.get(id).setVisible(false);
+            } else {
+                sprites.get(id).setVisible(true);
             }
             sprites.get(id).repaint();
         } else {
