@@ -5,6 +5,10 @@ import Utilidades.Dimension;
 import Utilidades.Punto;
 import Utilidades.TiposEntidades;
 import Visual.Sprites.*;
+import Modelo.EstadoPartida;
+import Modelo.Jugador;
+import Modelo.Ranking;
+import Visual.Ventanas.VentanaFinPartida;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,8 +22,7 @@ import java.util.ArrayList;
 
 /**
  * Panel donde se renderiza la vista del juego. Implementa Observador para recibir
- * actualizaciones del modelo. Las actualizaciones se encolan y se procesan en lote
- * en el Event Dispatch Thread para evitar saturar la cola del EDT.
+ * actualizaciones del modelo.
  */
 public class EspacioJuego extends JPanel implements Observador {
     Controlador controlador;
@@ -105,8 +108,7 @@ public class EspacioJuego extends JPanel implements Observador {
     }
 
     /**
-     * Indica a la vista que elimine el sprite asociado al id (por ejemplo cuando la entidad
-     * fue removida del modelo). Esta llamada encola la eliminación y la procesa en el EDT.
+     * Indica a la vista que elimine el sprite asociado al id.
      * @param id ID de la entidad eliminada.
      */
     @Override
@@ -125,7 +127,6 @@ public class EspacioJuego extends JPanel implements Observador {
 
     /**
      * Recibe la actualización de posición/dimensión/tipo/inactivo del modelo.
-     * Encola la actualización para su procesamiento en lote en el EDT.
      * @param id ID del objeto a cambiar.
      * @param punto Posición en el espacio del objeto a cambiar.
      * @param dimension Ancho y alto del objeto a cambiar.
@@ -151,11 +152,35 @@ public class EspacioJuego extends JPanel implements Observador {
     }
 
     /**
-     * Procesa la cola de actualizaciones en el EDT aplicando los cambios visuales
-     * (ADD/UPDATE/REMOVE/CLEAR) sobre los sprites del panel.
+     * Notifica que la partida finalizó. Se solicita el nombre al usuario con un diálogo custom
+     * y se agrega al ranking si el jugador ingresó nombre.
+     * @param estado Estado en que finalizó la partida.
+     * @param puntaje Puntaje final obtenido.
+     */
+    @Override
+    public void partidaFinalizada(EstadoPartida estado, int puntaje) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> partidaFinalizada(estado, puntaje));
+            return;
+        }
+        String mensaje = estado == EstadoPartida.GANADA ? "Ganaste" : "Perdiste";
+        String nombre = VentanaFinPartida.mostrarDialogo(this, mensaje);
+        if (nombre == null) return;
+        Jugador jugador = new Jugador(nombre);
+        jugador.sumarPuntos(puntaje);
+        Ranking.agregarJugador(jugador);
+        List<Jugador> top = Ranking.obtenerTop(10);
+        System.out.println("Ranking actualizado:");
+        for (Jugador j : top) {
+            System.out.println(j.getNombre() + " " + j.getPuntaje());
+        }
+    }
+
+    /**
+     * Procesa la cola de actualizaciones en el EDT aplicando los cambios visuales.
      */
     private void procesarCola() {
-        while (true) {
+        for (;;) {
             Actualizacion actualizacion;
             synchronized (colaActualizaciones) {
                 if (colaActualizaciones.isEmpty()) {
@@ -166,8 +191,8 @@ public class EspacioJuego extends JPanel implements Observador {
             }
 
             if (actualizacion.accion == Accion.LIMPIAR) {
-                for (Sprite sprite : new java.util.ArrayList<>(sprites.values())) {
-                    this.remove(sprite);
+                for (Sprite s : new java.util.ArrayList<>(sprites.values())) {
+                    this.remove(s);
                 }
                 sprites.clear();
                 this.revalidate();
@@ -176,9 +201,9 @@ public class EspacioJuego extends JPanel implements Observador {
             }
 
             if (actualizacion.accion == Accion.ELIMINAR) {
-                Sprite sprite = sprites.remove(actualizacion.id);
-                if (sprite != null) {
-                    this.remove(sprite);
+                Sprite s = sprites.remove(actualizacion.id);
+                if (s != null) {
+                    this.remove(s);
                     this.revalidate();
                     this.repaint();
                 }
@@ -187,10 +212,10 @@ public class EspacioJuego extends JPanel implements Observador {
 
             if (actualizacion.accion == Accion.ACTUALIZAR) {
                 if (sprites.containsKey(actualizacion.id)) {
-                    Sprite sprite = sprites.get(actualizacion.id);
-                    sprite.setBounds(actualizacion.punto.getPosicionX(), actualizacion.punto.getPosicionY(), actualizacion.dimension.getAncho(), actualizacion.dimension.getAlto());
-                    if (actualizacion.inactivo) sprite.setVisible(false); else sprite.setVisible(true);
-                    sprite.repaint();
+                    Sprite s = sprites.get(actualizacion.id);
+                    s.setBounds(actualizacion.punto.getPosicionX(), actualizacion.punto.getPosicionY(), actualizacion.dimension.getAncho(), actualizacion.dimension.getAlto());
+                    if (actualizacion.inactivo) s.setVisible(false); else s.setVisible(true);
+                    s.repaint();
                 } else {
                     Sprite nuevoSprite = null;
                     switch (actualizacion.tipo) {
