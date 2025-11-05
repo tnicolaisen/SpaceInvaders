@@ -180,7 +180,6 @@ public class Area {
             Proyectil p = ((Bateria) bateria).disparar();
             int id = contadorEntidades.getAndIncrement();
             entidades.put(id, p);
-            System.out.println("Area: dispararJugador -> proyectil id=" + id);
         }
     }
 

@@ -5,6 +5,7 @@ import Modelo.Dificultad;
 import Visual.Ventanas.VentanaDificultad;
 import Visual.Ventanas.VentanaJuego;
 import Visual.Ventanas.VentanaRanking;
+import Utilidades.MenuViewer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -41,17 +42,39 @@ public class EspacioMenuPrincipal extends JPanel {
 
     private int creditos = 0;
 
+    // Viewer que expone el estado del menú (sólo datos)
+    private final MenuViewer viewer;
+
     /**
      * Constructor.
      * @param controlador controlador principal
      */
     public EspacioMenuPrincipal(Controlador controlador) {
         this.controlador = controlador;
+        this.viewer = new MenuViewer();
         configurarEspacio();
         cargarElementos();
         cargarImagenesBotones();
         espacioJuego = new EspacioJuego(controlador);
         area = new Area(espacioJuego);
+
+        // Registramos en el controlador el Area, el viewer y un callback para cerrar la ventana.
+        // Así Controlador no necesita importar nada de Visual.
+        if (this.controlador != null) {
+            this.controlador.registrarArea(this.area);
+            this.controlador.registrarMenuViewer(this.viewer);
+            this.controlador.registrarCerrarVentanaCallback(new Runnable() {
+                @Override
+                public void run() {
+                    if (SwingUtilities.isEventDispatchThread()) {
+                        cerrarVentanaJuego();
+                    } else {
+                        SwingUtilities.invokeLater(() -> cerrarVentanaJuego());
+                    }
+                }
+            });
+        }
+
         configurarListeners();
         actualizarDisplayCreditos();
     }
@@ -61,12 +84,22 @@ public class EspacioMenuPrincipal extends JPanel {
     }
 
     /**
+     * Permite obtener el viewer del menú para lectura por otras capas.
+     * @return MenuViewer con estado actual del menú.
+     */
+    public MenuViewer getMenuViewer() {
+        return viewer;
+    }
+
+    /**
      * Carga créditos (usa para integrar la UI de carga de créditos).
      * @param cantidad cantidad de créditos a sumar (entero >= 0)
      */
     public void cargarCreditos(int cantidad) {
         if (cantidad <= 0) return;
         creditos += cantidad;
+        // mantener viewer en sincronía (simple asignación)
+        viewer.creditos = creditos;
         actualizarDisplayCreditos();
     }
 
@@ -77,6 +110,7 @@ public class EspacioMenuPrincipal extends JPanel {
     public boolean consumirCreditoParaPartida() {
         if (creditos <= 0) return false;
         creditos--;
+        viewer.creditos = creditos;
         actualizarDisplayCreditos();
         return true;
     }
@@ -88,6 +122,7 @@ public class EspacioMenuPrincipal extends JPanel {
     public void devolverCreditos(int cantidad) {
         if (cantidad <= 0) return;
         creditos += cantidad;
+        viewer.creditos = creditos;
         actualizarDisplayCreditos();
     }
 
@@ -107,6 +142,8 @@ public class EspacioMenuPrincipal extends JPanel {
         if (area != null) {
             new Thread(() -> area.reiniciar()).start();
         }
+        // cuando se reinicia el área se asume que la ventana del juego ya está cerrada
+        viewer.ventanaJuegoAbierta = false;
     }
 
     /**
@@ -117,11 +154,13 @@ public class EspacioMenuPrincipal extends JPanel {
             if (SwingUtilities.isEventDispatchThread()) {
                 ventanaJuego.dispose();
                 ventanaJuego = null;
+                viewer.ventanaJuegoAbierta = false;
             } else {
                 SwingUtilities.invokeLater(new Runnable() {
                     public void run() {
                         ventanaJuego.dispose();
                         ventanaJuego = null;
+                        viewer.ventanaJuegoAbierta = false;
                     }
                 });
             }
@@ -242,6 +281,8 @@ public class EspacioMenuPrincipal extends JPanel {
                     area.setDificultad(seleccionada);
                     area.iniciar();
                     ventanaJuego = new VentanaJuego(espacioJuego, EspacioMenuPrincipal.this);
+                    // mantener viewer en sincronía con ventana abierta
+                    viewer.ventanaJuegoAbierta = (ventanaJuego != null);
                 }
             }
         });
@@ -272,10 +313,9 @@ public class EspacioMenuPrincipal extends JPanel {
         this.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    System.out.println("Saliendo...");
                     System.exit(0);
                 } else if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    // Pulsar SPACE en el menú carga 1 crédito
+                    // Pulsar espacio en el menú carga 1 crédito
                     cargarCreditos(1);
                 }
             }

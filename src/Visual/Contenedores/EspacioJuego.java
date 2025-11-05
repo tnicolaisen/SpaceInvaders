@@ -150,10 +150,6 @@ public class EspacioJuego extends JPanel implements Observador {
         }
 
         List<Jugador> top = Ranking.obtenerTop(10);
-        System.out.println("Ranking actualizado:");
-        for (Jugador j : top) {
-            System.out.println(j.getNombre() + " " + j.getPuntaje());
-        }
 
         Window window = SwingUtilities.getWindowAncestor(this);
         if (window != null) window.dispose();

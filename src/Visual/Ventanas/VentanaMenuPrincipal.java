@@ -1,7 +1,5 @@
 package Visual.Ventanas;
 import javax.swing.*;
-
-import Controlador.Controlador;
 import Utilidades.Punto;
 import Utilidades.Dimension;
 import Visual.Contenedores.EspacioMenuPrincipal;
