@@ -1,15 +1,17 @@
 package Controlador;
-
 import Modelo.Area;
 import Utilidades.VigilanteEDT;
 import Utilidades.MenuViewer;
 
+import javax.naming.ldap.Control;
+
 /**
- * Controlador principal de la aplicación. Orquesta la vista del menú y el modelo Area.
+ * Controlador principal de la aplicación. Controla la vista del menú y el modelo Area.
  * NO debe importar nada del paquete Visual.
  */
 public class Controlador {
     private Area area;
+    private static Controlador controladorSingleton;
 
     // Viewer (lectura de estado) expuesto por la vista (opcional)
     private MenuViewer menuViewer;
@@ -20,14 +22,23 @@ public class Controlador {
     /**
      * Constructor.
      */
-    public Controlador() {
-        // no creamos la vista aquí (evita dependencia Visual.*)
+    private Controlador() {
         new Thread(new Runnable() {
             public void run() {
-                // iniciar vigilante en background
                 new VigilanteEDT(Controlador.this).iniciar();
             }
         }).start();
+    }
+
+    /**
+     * Retorna el Singleton de la clase Controlador
+     * @return
+     */
+    public static Controlador getControladorSingleton() {
+        if (controladorSingleton == null) {
+            controladorSingleton = new Controlador();
+        }
+        return controladorSingleton;
     }
 
     /**
@@ -64,7 +75,7 @@ public class Controlador {
     }
 
     /**
-     * Pide a la vista (vía callback registrado) que cierre (dispose) la ventana de juego si existe.
+     * Pide a la vista que cierre la ventana de juego si existe.
      */
     public void cerrarVentanaDelJuego() {
         if (cerrarVentanaCallback != null) {
