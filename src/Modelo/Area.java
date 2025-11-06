@@ -15,9 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Área en donde se ejecuta lógicamente el juego.
- * Implementación sin locks exclusivos para 'entidades' (usa ConcurrentHashMap)
- * para evitar deadlocks entre Timer-threads y el EDT.
+ * Area en donde ejecuto la lógica del juego.
+ * Uso estructuras concurrentes para evitar bloqueos entre timers y el EDT.
  */
 public class Area {
 
@@ -35,7 +34,7 @@ public class Area {
     private int margenDerecha;
     private int margenAbajo;
 
-    // Observador
+    // Observador (la vista que implementa Observador)
     private Observador observador;
     private EstadoPartida estadoPartida;
 
@@ -54,25 +53,22 @@ public class Area {
     // Estado iniciado
     private volatile boolean iniciado = false;
 
-    private int cantidadNavesInicial = 0;
-
     // Scoring / niveles / vidas
     private int puntajeTotal = 0;
     private int nivel = 1;
     private int vidasJugador = 3;
     private int siguienteVidaExtra = 500;
     private final int puntosPorNave = 10;
-    private final int puntosPorCambioNivel = 200;
 
     /**
-     * Registra el elemento pasado como observador.
+     * Registro el observador que recibirá actualizaciones visuales.
      * @param observador Observador a registrar.
      */
     private void registrarObservador(Observador observador) { this.observador = observador; }
 
     /**
      * Constructor.
-     * @param observador Elemento que funcionará como observador. El objeto debe implementar la interfaz Observador.
+     * @param observador elemento que funcionará como observador (implementa Observador).
      */
     public Area(Observador observador) {
         dimension = new Dimension(800, 900);
@@ -90,8 +86,7 @@ public class Area {
     public int getVidasJugador() { return vidasJugador; }
 
     /**
-     * Ajusta la dificultad de la partida. Reprograma timer de movimiento si corresponde.
-     * @param dificultad dificultad seleccionada
+     * Ajusto la dificultad de la partida y reprogramo timers si corresponde.
      */
     public void setDificultad(Dificultad dificultad) {
         if (dificultad == null) return;
@@ -107,7 +102,7 @@ public class Area {
     }
 
     /**
-     * Inicia timers de la partida.
+     * Inicio los timers de la partida.
      */
     public void iniciar() {
         if (!iniciado) {
@@ -117,7 +112,7 @@ public class Area {
     }
 
     /**
-     * Detiene los timers de la partida.
+     * Detengo timers y limpio referencias temporales.
      */
     public void detener() {
         Timer te = timerEjecucion;
@@ -138,7 +133,7 @@ public class Area {
     }
 
     /**
-     * Reinicia el Area (detiene, regenera y resetea estado).
+     * Reinicia el Area: detiene la simulación, reaparece entidades y resetea el estado.
      */
     public void reiniciar() {
         detener();
@@ -208,7 +203,6 @@ public class Area {
 
         entidades.clear();
         entidades.putAll(nuevas);
-        cantidadNavesInicial = oleada.devolverNaves().size();
     }
 
     // ---------- Timers y ejecución ----------

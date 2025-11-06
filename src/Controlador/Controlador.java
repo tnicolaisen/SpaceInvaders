@@ -3,11 +3,10 @@ import Modelo.Area;
 import Utilidades.VigilanteEDT;
 import Utilidades.MenuViewer;
 
-import javax.naming.ldap.Control;
-
 /**
- * Controlador principal de la aplicación. Controla la vista del menú y el modelo Area.
- * NO debe importar nada del paquete Visual.
+ * Controlador principal de la aplicación.
+ * Maneja la interacción entre la vista y el modelo Area.
+ * NO debo importar nada del paquete Visual.
  */
 public class Controlador {
     private Area area;
@@ -20,7 +19,8 @@ public class Controlador {
     private Runnable cerrarVentanaCallback;
 
     /**
-     * Constructor.
+     * Constructor privado.
+     * Inicio el vigilante del EDT en un hilo de fondo.
      */
     private Controlador() {
         new Thread(new Runnable() {
@@ -31,10 +31,10 @@ public class Controlador {
     }
 
     /**
-     * Retorna el Singleton de la clase Controlador
-     * @return
+     * Retorno el singleton del controlador.
+     * @return instancia única de Controlador
      */
-    public static Controlador getControladorSingleton() {
+    public static synchronized Controlador getControladorSingleton() {
         if (controladorSingleton == null) {
             controladorSingleton = new Controlador();
         }
@@ -42,40 +42,40 @@ public class Controlador {
     }
 
     /**
-     * La vista registra el Area que creó para que el controlador pueda actuar sobre el modelo.
+     * Registro el Area que creó la vista para que pueda actuar sobre el modelo.
      */
     public void registrarArea(Area area) {
         this.area = area;
     }
 
     /**
-     * La vista registra su MenuViewer (objeto de sólo datos) para que el controlador pueda leer estado si lo necesita.
+     * Registro el MenuViewer (objeto de sólo datos) que expone la vista.
      */
     public void registrarMenuViewer(MenuViewer viewer) {
         this.menuViewer = viewer;
     }
 
     /**
-     * La vista registra un callback (Runnable) que cierra la ventana. El controlador lo invoca cuando necesite pedir cierre.
-     * Esto evita que el controlador importe cualquier clase de la vista.
+     * Registro un callback (Runnable) que cierra la ventana. Lo invoco cuando necesito pedir cierre.
      */
     public void registrarCerrarVentanaCallback(Runnable callback) {
         this.cerrarVentanaCallback = callback;
     }
 
+    // Delego acciones del jugador al Area cuando esté registrado
     public void moverseDerecha(){ if (area != null) area.moverJugadorDerecha(); }
     public void moverseIzquierda(){ if (area != null) area.moverJugadorIzquierda(); }
     public void disparar(){ if (area != null) area.dispararJugador(); }
 
     /**
-     * Detiene la lógica del juego (timers) inmediatamente.
+     * Detengo la lógica del juego (timers) inmediatamente.
      */
     public void detenerJuego() {
         if (area != null) area.detener();
     }
 
     /**
-     * Pide a la vista que cierre la ventana de juego si existe.
+     * Pido a la vista que cierre la ventana de juego si existe.
      */
     public void cerrarVentanaDelJuego() {
         if (cerrarVentanaCallback != null) {
@@ -84,13 +84,11 @@ public class Controlador {
     }
 
     /**
-     * Carga créditos mediante la vista (si la vista lo registra). Mantuve este método para compatibilidad
-     * con el código existente; la implementación concreta la realiza la vista.
-     * Aquí sólo delegamos si el area/visor están registrados.
+     * Método de compatibilidad para que la vista reciba créditos.
+     * (La vista implementa la lógica concreta de mostrar/actualizar créditos.)
      */
     public void cargarCreditos(int cantidad) {
-        // preferimos delegar a la vista; si la vista no fue registrada no hacemos nada
-        // (la vista normalmente registra su propio manejo de créditos)
+        // delegación intencional: la vista lleva el manejo de UI
     }
 
     public Area obtenerArea() { return area; }
