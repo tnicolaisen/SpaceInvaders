@@ -373,6 +373,11 @@ public class Area {
         for (Integer inactivo : inactivos){
             entidades.remove(inactivo);
         }
+
+        // Recalculo la caja de la oleada tras eliminar inactivos para mantener la colisión correcta.
+        if (oleada != null) {
+            oleada.recalcularCaja();
+        }
     }
 
     private void dispararNave(){
